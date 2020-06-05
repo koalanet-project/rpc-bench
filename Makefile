@@ -49,7 +49,7 @@ build/%.o: src/%.cc
 	$(CXX) $(INCPATH) $(CFLAGS) -c $< -o $@
 
 compiledb:
-	mv compile_commands.json /tmp
+	@[[ -f compile_commands.json ]] && mv -f compile_commands.json /tmp || true
 	bear make -C .
 
 -include build/*.d
