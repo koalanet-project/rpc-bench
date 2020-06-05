@@ -1,0 +1,6 @@
+build/
+deps/
+compile_commands.json
+Session.vim
+.clangd/
+.vscode/
