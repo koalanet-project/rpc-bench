@@ -29,7 +29,7 @@ class BwServerApp : public App {
  public:
   BwServerApp(CommandOpts opts) : App(opts) {}
 
-  virtual int Run() override;
+  virtual int Run() = 0;
 
   virtual void Init() = 0;
 

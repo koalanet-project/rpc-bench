@@ -12,11 +12,10 @@ GRPC_CPP_PLUGIN_PATH := `which $(GRPC_CPP_PLUGIN)`
 INCPATH += -I./src -I$(DEPS_PATH)/include
 CFLAGS += -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLAGS)
 LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
-	    `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++` \
-		-lgrpc++_unsecure -lgrpc++_reflection -lgrpc++_error_details -lgrpc++ -lgrpc_unsecure -lgrpc_plugin_support  -lgrpcpp_channelz -lgrpc -lgpr -laddress_sorting \
-	    -lpthread \
-	    -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
-	    -ldl
+		`pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++` \
+		-lpthread \
+		-Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
+		-ldl
 
 DEBUG := 1
 ifeq ($(DEBUG), 1)
