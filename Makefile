@@ -5,13 +5,18 @@ CC ?= gcc
 
 DEPS_PATH ?= $(shell pwd)/deps
 
-ifndef PROTOC
-PROTOC = ${DEPS_PATH}/bin/protoc
-endif
+PROTOC ?= ${DEPS_PATH}/bin/protoc
+GRPC_CPP_PLUGIN ?= ${DEPS_PATH}/bin/grpc_cpp_plugin
+GRPC_CPP_PLUGIN_PATH := `which $(GRPC_CPP_PLUGIN)`
 
-INCPATH = -I./src -I$(DEPS_PATH)/include
-CFLAGS = -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLAGS)
-LIBS = -lpthread
+INCPATH += -I./src -I$(DEPS_PATH)/include
+CFLAGS += -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLAGS)
+LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
+	    `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++` \
+		-lgrpc++_unsecure -lgrpc++_reflection -lgrpc++_error_details -lgrpc++ -lgrpc_unsecure -lgrpc_plugin_support  -lgrpcpp_channelz -lgrpc -lgpr -laddress_sorting \
+	    -lpthread \
+	    -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
+	    -ldl
 
 DEBUG := 1
 ifeq ($(DEBUG), 1)
@@ -24,8 +29,13 @@ ifdef ASAN
 CFLAGS += -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls
 endif
 
-SRCS = $(shell find src -type f -name "*.cc")
-OBJS = $(addprefix build/, rpc_bench.o app.o)
+PROTO_PATH = src/protos
+PROTOS = $(shell find $(PROTO_PATH) -type f -name "*.proto")
+CODEGEN_SRCS = $(PROTOS:.proto=.pb.cc) $(PROTOS:.proto=.grpc.pb.cc)
+CODEGEN_HEADERS = $(PROTOS:.proto=.pb.h) $(PROTOS:.proto=.grpc.pb.h)
+
+SRCS = $(shell find src -type f -name "*.cc") $(CODEGEN_SRCS)
+OBJS = $(patsubst src/%,build/%,$(SRCS:.cc=.o))
 
 all: rpc-bench
 
@@ -41,9 +51,16 @@ lint:
 rpc-bench: build/rpc-bench
 
 build/rpc-bench: $(OBJS)
+	@echo $(LIBS)
 	$(CXX) $(CFLAGS) $(LIBS) $^ -o $@
 
-build/%.o: src/%.cc
+$(PROTO_PATH)/%.pb.cc $(PROTO_PATH)/%.pb.h: $(PROTO_PATH)/%.proto $(GRPC)
+	$(PROTOC) -I $(PROTO_PATH) --cpp_out=$(PROTO_PATH) $<
+
+$(PROTO_PATH)/%.grpc.pb.cc $(PROTO_PATH)/%.grpc.pb.h: $(PROTO_PATH)/%.proto $(GRPC)
+	$(PROTOC) -I $(PROTO_PATH) --grpc_out=$(PROTO_PATH) --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN_PATH) $<
+
+build/%.o: src/%.cc $(CODEGEN_HEADERS) $(GRPC)
 	@mkdir -p $(@D)
 	$(CXX) $(INCPATH) $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) $(INCPATH) $(CFLAGS) -c $< -o $@
