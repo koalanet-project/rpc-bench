@@ -50,7 +50,6 @@ lint:
 rpc-bench: build/rpc-bench
 
 build/rpc-bench: $(OBJS)
-	@echo $(LIBS)
 	$(CXX) $(CFLAGS) $(LIBS) $^ -o $@
 
 $(PROTO_PATH)/%.pb.cc $(PROTO_PATH)/%.pb.h: $(PROTO_PATH)/%.proto $(GRPC)

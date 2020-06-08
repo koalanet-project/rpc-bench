@@ -44,7 +44,7 @@ class BwClientApp : public App {
 
   virtual void Init() = 0;
 
-  virtual void IssueBwReq(const BwMessage& bw_msg, BwAck *bw_ack) = 0;
+  virtual void IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) = 0;
 
  private:
   Meter meter_;

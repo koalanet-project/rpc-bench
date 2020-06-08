@@ -1,10 +1,12 @@
-#include <grpcpp/health_check_service_interface.h>
+#include "grpc/grpc_bw_app.h"
+
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
+#include <grpcpp/health_check_service_interface.h>
+
 #include <limits>
 
-#include "grpc/grpc_bw_app.h"
-#include "command_opts.h"
 #include "bw_app.h"
+#include "command_opts.h"
 
 namespace rpc_bench {
 namespace grpc {
@@ -13,14 +15,15 @@ namespace grpc {
 void GrpcBwClientApp::Init() {
   std::string remote_uri = opts_.host.value() + ":" + std::to_string(opts_.port);
   RPC_LOG(DEBUG) << "gRPC client is connecting to remote_uri: " << remote_uri;
-  stub_ = std::make_unique<BwService::Stub>(::grpc::CreateChannel(remote_uri, ::grpc::InsecureChannelCredentials()));
+  stub_ = std::make_unique<BwService::Stub>(
+      ::grpc::CreateChannel(remote_uri, ::grpc::InsecureChannelCredentials()));
 }
 
-void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck *bw_ack) {
+void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) {
   PbBwMessage request;
   PackPbBwMessage(bw_msg, &request);
   RPC_LOG(DEBUG) << "request header size: " << request.header().ByteSizeLong();
-  RPC_LOG(DEBUG) << "request size: " <<  request.ByteSizeLong();
+  RPC_LOG(DEBUG) << "request size: " << request.ByteSizeLong();
   PbBwAck reply;
   // TODO(cjr): figure out whether it really needs a per call ClientContext
   ClientContext context;
@@ -47,15 +50,14 @@ void UnpackPbBwHeader(BwHeader* bw_header, const PbBwHeader& pb_bw_header) {
   bw_header->field3 = pb_bw_header.field3();
 }
 
-void PackPbBwHeader(const BwHeader bw_header, PbBwHeader *pb_bw_header) {
+void PackPbBwHeader(const BwHeader bw_header, PbBwHeader* pb_bw_header) {
   pb_bw_header->set_field1(bw_header.field1);
   pb_bw_header->set_field2(bw_header.field2);
   pb_bw_header->set_field3(bw_header.field3);
 }
 
 // grpc server handler
-Status BwServiceImpl::Request(ServerContext* context, const PbBwMessage* request,
-                              PbBwAck* reply) {
+Status BwServiceImpl::Request(ServerContext* context, const PbBwMessage* request, PbBwAck* reply) {
   // TODO(cjr): check if this is OK
   BwHeader header;
   UnpackPbBwHeader(&header, request->header());
@@ -84,7 +86,6 @@ int GrpcBwServerApp::Run() {
   server_->Wait();
   return 0;
 }
-
 
 }  // namespace grpc
 }  // namespace rpc_bench

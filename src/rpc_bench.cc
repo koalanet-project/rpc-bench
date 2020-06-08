@@ -84,6 +84,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   std::cout << opts.DebugString() << std::endl;
-  auto app = std::unique_ptr<App>(App::Create(opts));  // copy
+  auto app = std::unique_ptr<App>(App::Create(opts));  // copy opts
   return app->Run();
 }
