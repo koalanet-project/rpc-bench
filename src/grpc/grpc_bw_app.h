@@ -52,8 +52,11 @@ using ::grpc::ServerContext;
 
 // Logic and data behind the server's behavior.
 class BwServiceImpl final : public BwService::Service {
+ public:
+  BwServiceImpl() : meter_{1000} {}
   Status Request(ServerContext* context, const PbBwMessage* request,
                  PbBwAck* reply) override;
+  Meter meter_;
 };
 
 class GrpcBwServerApp final : public BwServerApp {

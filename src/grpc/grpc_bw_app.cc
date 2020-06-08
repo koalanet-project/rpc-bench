@@ -1,5 +1,6 @@
 #include <grpcpp/health_check_service_interface.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
+#include <limits>
 
 #include "grpc/grpc_bw_app.h"
 #include "command_opts.h"
@@ -10,7 +11,7 @@ namespace grpc {
 
 // GrpcBwClientApp
 void GrpcBwClientApp::Init() {
-  std::string remote_uri = opts_.host.value() + std::to_string(opts_.port);
+  std::string remote_uri = opts_.host.value() + ":" + std::to_string(opts_.port);
   RPC_LOG(DEBUG) << "gRPC client is connecting to remote_uri: " << remote_uri;
   stub_ = std::make_unique<BwService::Stub>(::grpc::CreateChannel(remote_uri, ::grpc::InsecureChannelCredentials()));
 }
@@ -18,6 +19,8 @@ void GrpcBwClientApp::Init() {
 void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck *bw_ack) {
   PbBwMessage request;
   PackPbBwMessage(bw_msg, &request);
+  RPC_LOG(DEBUG) << "request header size: " << request.header().ByteSizeLong();
+  RPC_LOG(DEBUG) << "request size: " <<  request.ByteSizeLong();
   PbBwAck reply;
   // TODO(cjr): figure out whether it really needs a per call ClientContext
   ClientContext context;
@@ -32,12 +35,9 @@ void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck *bw_ack) {
 }
 
 void PackPbBwMessage(const BwMessage& bw_msg, PbBwMessage* pb_bw_msg) {
-  PbBwHeader pb_header;
-  const BwHeader& header = bw_msg.header;
-  PackPbBwHeader(header, &pb_header);
-
   // TODO(cjr): this may have some problems
-  pb_bw_msg->set_allocated_header(&pb_header);
+  const BwHeader& header = bw_msg.header;
+  PackPbBwHeader(header, pb_bw_msg->mutable_header());
   pb_bw_msg->set_data(bw_msg.data);
 }
 
@@ -59,19 +59,19 @@ Status BwServiceImpl::Request(ServerContext* context, const PbBwMessage* request
   // TODO(cjr): check if this is OK
   BwHeader header;
   UnpackPbBwHeader(&header, request->header());
-  PbBwHeader pb_header;
-  PackPbBwHeader(header, &pb_header);
-  reply->set_allocated_header(&pb_header);
+  PackPbBwHeader(header, reply->mutable_header());
+  meter_.AddBytes(request->ByteSizeLong());
   return Status::OK;
 }
 
 // GrpcBwServerApp
 void GrpcBwServerApp::Init() {
-  std::string bind_uri = "0.0.0.0" + std::to_string(opts_.port);
+  std::string bind_uri = "0.0.0.0:" + std::to_string(opts_.port);
 
   ::grpc::EnableDefaultHealthCheckService(true);
   ::grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
+  builder.SetMaxMessageSize(std::numeric_limits<int>::max());
   builder.AddListeningPort(bind_uri, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
 

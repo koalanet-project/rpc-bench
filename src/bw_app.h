@@ -10,14 +10,14 @@ struct BwHeader {
   uint32_t field1;
   bool field2;
   std::string field3;
-  size_t size() const { return 0; }
+  size_t Size() const { return sizeof(field1) + sizeof(field2) + field3.size(); }
 };
 
 struct BwMessage {
   BwHeader header;
   std::string data;
 
-  size_t size() const { return header.size() + data.size(); }
+  size_t Size() const { return header.Size() + data.size(); }
 };
 
 struct BwAck {
@@ -34,12 +34,11 @@ class BwServerApp : public App {
   virtual void Init() = 0;
 
  private:
-  Meter meter_;
 };
 
 class BwClientApp : public App {
  public:
-  BwClientApp(CommandOpts opts) : App(opts) {}
+  BwClientApp(CommandOpts opts) : App(opts), meter_{1000} {}
 
   virtual int Run() override;
 

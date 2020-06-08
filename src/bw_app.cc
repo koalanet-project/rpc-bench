@@ -10,7 +10,7 @@ int BwClientApp::Run() {
   while (1) {
     BwAck ack;
     IssueBwReq(bw_msg, &ack);
-    meter_.AddBytes(bw_msg.size());
+    meter_.AddBytes(bw_msg.Size());
   }
   return 0;
 }
