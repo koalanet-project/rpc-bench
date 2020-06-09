@@ -1,0 +1,13 @@
+export SYSTEMD_EDITOR=vim
+
+export NODE_PATH=/usr/lib/node_modules
+export GOPATH=$HOME/Developing/go
+export PATH=$PATH:$GOPATH/bin
+
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+alias dig=drill
+
+export HISTFILESIZE=400000000
+export HISTSIZE=1000000  # how many lines of history to keep in memory
+export SAVEHIST=1000000  # how many lines to keep in the history file
