@@ -53,10 +53,10 @@ build/rpc-bench: $(OBJS)
 	$(CXX) $(CFLAGS) $(LIBS) $^ -o $@
 
 $(PROTO_PATH)/%.pb.cc $(PROTO_PATH)/%.pb.h: $(PROTO_PATH)/%.proto $(GRPC)
-	LD_LIBRARY_PATH=/root/rpc-bench/deps/lib $(PROTOC) -I $(PROTO_PATH) --cpp_out=$(PROTO_PATH) $<
+	LD_LIBRARY_PATH=deps/lib $(PROTOC) -I $(PROTO_PATH) --cpp_out=$(PROTO_PATH) $<
 
 $(PROTO_PATH)/%.grpc.pb.cc $(PROTO_PATH)/%.grpc.pb.h: $(PROTO_PATH)/%.proto $(GRPC)
-	LD_LIBRARY_PATH=/root/rpc-bench/deps/lib $(PROTOC) -I $(PROTO_PATH) --grpc_out=$(PROTO_PATH) --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN_PATH) $<
+	LD_LIBRARY_PATH=deps/lib $(PROTOC) -I $(PROTO_PATH) --grpc_out=$(PROTO_PATH) --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN_PATH) $<
 
 build/%.o: src/%.cc $(CODEGEN_HEADERS) $(GRPC)
 	@mkdir -p $(@D)
