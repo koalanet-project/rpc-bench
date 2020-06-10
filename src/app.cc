@@ -2,6 +2,7 @@
 #include "bw_app.h"
 #include "command_opts.h"
 #include "grpc/grpc_bw_app.h"
+#include "socket/socket_bw_app.h"
 #include "logging.h"
 
 namespace rpc_bench {
@@ -13,6 +14,9 @@ App* App::Create(CommandOpts opts) {
     if (opts.rpc.value() == "grpc") {
       return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcBwServerApp(opts))
                                     : static_cast<App*>(new grpc::GrpcBwClientApp(opts));
+    } else if (opts.rpc.value() == "socket") {
+      return opts.is_server.value() ? static_cast<App*>(new socket::SocketBwServerApp(opts))
+                                    : static_cast<App*>(new socket::SocketBwClientApp(opts));
     }
   } else {
     RPC_UNIMPLEMENTED

@@ -3,7 +3,8 @@ syntax = "proto3";
 package rpc_bench.bw_app;
 
 service BwService {
-  rpc Request (PbBwMessage) returns (PbBwAck) {}
+  rpc PushData (PbBwMessage) returns (PbBwAck) {}
+  rpc StopServer (StopRequest) returns (StopResponse) {}
 }
 
 // The common header of bandwidth messages and acknowledges
@@ -25,4 +26,12 @@ message PbBwMessage {
 // The response of BwService which only contains a copy of the request's header
 message PbBwAck {
   PbBwHeader header = 1;
+}
+
+message StopRequest {
+  // empty
+}
+
+message StopResponse {
+  // empty
 }

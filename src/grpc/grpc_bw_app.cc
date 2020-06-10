@@ -19,7 +19,7 @@ void GrpcBwClientApp::Init() {
       ::grpc::CreateChannel(remote_uri, ::grpc::InsecureChannelCredentials()));
 }
 
-void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) {
+void GrpcBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   PbBwMessage request;
   PackPbBwMessage(bw_msg, &request);
   RPC_LOG(DEBUG) << "request header size: " << request.header().ByteSizeLong();
@@ -27,7 +27,7 @@ void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) {
   PbBwAck reply;
   // TODO(cjr): figure out whether it really needs a per call ClientContext
   ClientContext context;
-  Status status = stub_->Request(&context, request, &reply);
+  Status status = stub_->PushData(&context, request, &reply);
   if (status.ok()) {
     bw_ack->success = true;
     UnpackPbBwHeader(&bw_ack->header, reply.header());
@@ -37,32 +37,17 @@ void GrpcBwClientApp::IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) {
   }
 }
 
-void PackPbBwMessage(const BwMessage& bw_msg, PbBwMessage* pb_bw_msg) {
-  // TODO(cjr): this may have some problems
-  const BwHeader& header = bw_msg.header;
-  PackPbBwHeader(header, pb_bw_msg->mutable_header());
-  pb_bw_msg->set_data(bw_msg.data);
-}
-
-void UnpackPbBwHeader(BwHeader* bw_header, const PbBwHeader& pb_bw_header) {
-  bw_header->field1 = pb_bw_header.field1();
-  bw_header->field2 = pb_bw_header.field2();
-  bw_header->field3 = pb_bw_header.field3();
-}
-
-void PackPbBwHeader(const BwHeader bw_header, PbBwHeader* pb_bw_header) {
-  pb_bw_header->set_field1(bw_header.field1);
-  pb_bw_header->set_field2(bw_header.field2);
-  pb_bw_header->set_field3(bw_header.field3);
-}
-
 // grpc server handler
-Status BwServiceImpl::Request(ServerContext* context, const PbBwMessage* request, PbBwAck* reply) {
+Status BwServiceImpl::PushData(ServerContext* context, const PbBwMessage* request, PbBwAck* reply) {
   // TODO(cjr): check if this is OK
   BwHeader header;
   UnpackPbBwHeader(&header, request->header());
   PackPbBwHeader(header, reply->mutable_header());
   meter_.AddBytes(request->ByteSizeLong());
+  return Status::OK;
+}
+
+Status BwServiceImpl::StopServer(ServerContext* context, const StopRequest* req, StopResponse* res) {
   return Status::OK;
 }
 
