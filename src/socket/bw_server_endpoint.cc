@@ -39,7 +39,7 @@ void BwServerEndpoint::OnAccepted() {
 void BwServerEndpoint::GetPeerAddr() {
   struct sockaddr_storage storage;
   struct sockaddr* sockaddr = reinterpret_cast<struct sockaddr*>(&storage);
-  socklen_t len;
+  socklen_t len = sizeof(struct sockaddr_storage);
   PCHECK(!getpeername(sock_, sockaddr, &len));
   sock_addr_ = SockAddr(sockaddr, len);
 }
@@ -84,7 +84,10 @@ void BwServerEndpoint::OnRecvReady() {
 bool BwServerEndpoint::ReceiveMeta() {
   uint32_t meta_buffer[2];
   // force blocking receive here
-  PCHECK(sock_.RecvAll(meta_buffer, sizeof(meta_buffer)) == sizeof(meta_buffer));
+  // PCHECK(sock_.RecvAll(meta_buffer, sizeof(meta_buffer)) == sizeof(meta_buffer));
+  if (sock_.RecvAll(meta_buffer, sizeof(meta_buffer)) < sizeof(meta_buffer)) {
+    return false;
+  }
   uint32_t header_size = meta_buffer[0];
   uint32_t data_size = meta_buffer[1];
   // allocate buffer

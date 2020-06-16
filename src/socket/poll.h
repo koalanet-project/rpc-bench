@@ -86,7 +86,7 @@ inline uint32_t InterestToEpoll(Interest interest) {
   // let's just use level-trigger because it's less error prone and still efficient
   uint32_t kind = 0;
   if (interest.IsReadable()) {
-    kind |= EPOLLIN;
+    kind |= EPOLLIN | EPOLLRDHUP;
   }
   if (interest.IsWritable()) {
     kind |= EPOLLOUT;
@@ -194,6 +194,14 @@ class Event {
   inline bool IsError() const {
     return event_.events & EPOLLERR;
   }
+  inline bool IsReadClosed() const {
+    return (event_.events & EPOLLHUP) ||
+           ((event_.events & EPOLLRDHUP) && (event_.events & EPOLLIN));
+  }
+  inline bool IsWriteClosed() const {
+    return (event_.events & EPOLLHUP) ||
+           ((event_.events & EPOLLOUT) && (event_.events & EPOLLERR));
+  }
   std::string DebugString() {
     std::stringstream ss;
     int count = 0;
@@ -247,6 +255,12 @@ class Event {
   }
   inline bool IsError() const {
     return inner_.IsError();
+  }
+  inline bool IsReadClosed() const {
+    return inner_.IsReadClosed();
+  }
+  inline bool IsWriteClosed() const {
+    return inner_.IsWriteClosed();
   }
   std::string DebugString() {
     return inner_.DebugString();

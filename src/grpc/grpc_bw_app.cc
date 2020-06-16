@@ -22,8 +22,8 @@ void GrpcBwClientApp::Init() {
 void GrpcBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   PbBwMessage request;
   PackPbBwMessage(bw_msg, &request);
-  RPC_LOG(DEBUG) << "request header size: " << request.header().ByteSizeLong();
-  RPC_LOG(DEBUG) << "request size: " << request.ByteSizeLong();
+  RPC_LOG(TRACE) << "request header size: " << request.header().ByteSizeLong();
+  RPC_LOG(TRACE) << "request size: " << request.ByteSizeLong();
   PbBwAck reply;
   // TODO(cjr): figure out whether it really needs a per call ClientContext
   ClientContext context;

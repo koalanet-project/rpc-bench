@@ -113,7 +113,7 @@ int SocketBwServerApp::Run() {
         endpoint->OnSendReady();
       }
 
-      if (ev.IsError()) {
+      if (ev.IsError() || ev.IsReadClosed() || ev.IsWriteClosed()) {
         std::string remote_uri = endpoint->sock_addr().AddrStr();
         RPC_LOG(ERROR) << "EPOLLERR, endpoint uri: " << remote_uri;
         endpoint->OnError();

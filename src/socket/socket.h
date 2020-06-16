@@ -234,7 +234,7 @@ class TcpSocket : public Socket {
     while (n < len) {
       ssize_t r = Send(cbuf + n, len - n, flags);
       if (r == -1) {
-        CHECK(LastErrorWouldBlock()) << "errno: " << GetLastError();
+        PCHECK(LastErrorWouldBlock()) << "errno: " << GetLastError();
       } else {
         n += r;
       }
@@ -248,7 +248,7 @@ class TcpSocket : public Socket {
     while (n < len) {
       ssize_t r = Recv(cbuf + n, len - n, flags);
       if (r == -1) {
-        CHECK(LastErrorWouldBlock()) << "errno: " << GetLastError();
+        PCHECK(LastErrorWouldBlock()) << "errno: " << GetLastError();
       } else if (r == 0) {
         break;
       } else {
