@@ -3,10 +3,13 @@
 #include <sys/socket.h>
 
 #include <chrono>
+#include <optional>
 #include <queue>
 #include <thread>
 
 #include "bw_app.h"
+#include "socket/bw_server_endpoint.h"
+#include "socket/poll.h"
 
 namespace rpc_bench {
 namespace socket {
@@ -29,13 +32,18 @@ void SocketBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   bw_app::PbBwHeader pb_header;
   PackPbBwHeader(bw_msg.header, &pb_header);
   size_t header_size = pb_header.ByteSizeLong();
-  pb_header.SerializeToArray(send_buffer_.data(), header_size);
-  RPC_CHECK_EQ(header_size, sock_.SendAll(send_buffer_.data(), header_size, 0));
   size_t data_size = bw_msg.data.size();
+  // write meta header
+  *reinterpret_cast<uint32_t*>(send_buffer_.data()) = header_size;
+  *reinterpret_cast<uint32_t*>(send_buffer_.data() + sizeof(uint32_t)) = data_size;
+  // write message header
+  pb_header.SerializeToArray(send_buffer_.data() + 2 * sizeof(uint32_t), header_size);
+  RPC_CHECK_EQ(header_size, sock_.SendAll(send_buffer_.data(), header_size, 0));
+  // write message data
   RPC_CHECK_EQ(data_size, sock_.SendAll(bw_msg.data.data(), data_size, 0));
 
   // receive and de-serialize
-  ssize_t r = sock_.RecvAll(recv_buffer_.data(), header_size, 0);
+  size_t r = sock_.RecvAll(recv_buffer_.data(), header_size, 0);
   if (r < header_size) {
     RPC_LOG(ERROR) << "only " << r << " vs " << header_size
                    << " bytes received, peer has performed an orderly shutdown";
@@ -47,6 +55,13 @@ void SocketBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   }
 }
 
+void SocketBwServerApp::HandleNewConnection() {
+  TcpSocket new_sock = listener_.Accept();
+  auto endpoint = std::make_shared<BwServerEndpoint>(new_sock, this);
+  endpoint->OnAccepted();
+  endpoints_[endpoint->fd()] = endpoint;
+}
+
 void SocketBwServerApp::Init() {
   AddrInfo ai(opts_.port, SOCK_STREAM);
   listener_.Create(ai);
@@ -55,9 +70,7 @@ void SocketBwServerApp::Init() {
   listener_.Bind(ai);
   listener_.Listen();
 
-  listen_event_.events = EPOLLIN;
-  listen_event_.data.fd = listener_.sockfd;
-  poller_.EpollCtl(EPOLL_CTL_ADD, listener_.sockfd, &listen_event_);
+  poll_.registry().Register(listener_, Token(listener_.sockfd), Interest::READABLE);
 
   RPC_LOG(DEBUG) << "socket server is listening on uri: " << ai.AddrStr();
 }
@@ -65,49 +78,49 @@ void SocketBwServerApp::Init() {
 int SocketBwServerApp::Run() {
   int timeout_ms = prism::GetEnvOrDefault<int>("EPOLL_TIMEOUT_MS", 1000);
   int max_events = prism::GetEnvOrDefault<int>("EPOLL_MAX_EVENTS", 1024);
-  std::vector<struct epoll_event> events(max_events);
+  // never resize this vector
+  std::vector<Event> events(max_events);
 
   std::queue<std::shared_ptr<BwServerEndpoint>> dead_eps;
 
   while (1) {
     // Epoll IO
-    int nevents = poller_.EpollWait(&events[0], max_events, timeout_ms);
+    int nevents = poll_.PollOnce(&events[0], max_events, std::chrono::milliseconds(timeout_ms));
 
     for (int i = 0; i < nevents; i++) {
       auto& ev = events[i];
-      if (ev.data.fd == listener_.sockfd) {
-        CHECK(ev.events & EPOLLIN);
+      if (ev.token().token == static_cast<size_t>(listener_.sockfd)) {
+        RPC_CHECK(ev.IsReadable());
         HandleNewConnection();
         continue;
       }
 
       // data events
-      BwServerEndpoint* endpoint = static_cast<BwServerEndpoint*>(ev.data.ptr);
+      BwServerEndpoint* endpoint =
+          reinterpret_cast<BwServerEndpoint*>(static_cast<uintptr_t>(ev.token()));
 
-      if (ev.events & EPOLLIN) {
+      if (ev.IsReadable()) {
         endpoint->OnRecvReady();
       }
 
-      if (ev.events & EPOLLOUT) {
+      if (ev.IsWritable()) {
         endpoint->OnSendReady();
       }
 
-      if (ev.events & EPOLLERR) {
-        RPC_LOG(ERROR) << "EPOLLERR, endpoint uri: " << endpoint->ai().AddrStr();
+      if (ev.IsError()) {
+        std::string remote_uri = endpoint->sock_addr().AddrStr();
+        RPC_LOG(ERROR) << "EPOLLERR, endpoint uri: " << remote_uri;
         endpoint->OnError();
-        dead_eps.push(endpoint);
+        std::shared_ptr<BwServerEndpoint> resource = endpoints_.extract(endpoint->fd()).mapped();
+        dead_eps.push(resource);
       }
     }
 
     // garbage collection
     while (!dead_eps.empty()) {
-      auto endpoint = std::move(dead_eps.front());
-      /// In kernel versions before 2.6.9, the EPOLL_CTL_DEL operation required
-      /// a non-null pointer in event, even though this argument is ignored.
-      /// Since Linux 2.6.9, event can be specified as NULL  when  using
-      /// EPOLL_CTL_DEL.  Applications that need to be portable to kernels
-      /// before 2.6.9 should specify a non-null pointer in event.
-      poller_.EpollCtl(EPOLL_CTL_DEL, endpoint->fd(), nullptr);
+      auto resource = std::move(dead_eps.front());
+      poll_.registry().Deregister(resource->sock());
+      resource->Disconnect();
       dead_eps.pop();
     }
   }

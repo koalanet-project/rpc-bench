@@ -57,7 +57,7 @@ struct AddrInfo {
     auto proto_str = protocol == SOCK_STREAM ? "tcp" : "udp";
     return prism::FormatString("%s://%s:%s", proto_str, addr_buf, serv_buf);
   }
-  inline std::string AddrStr() {
+  std::string AddrStr() {
     CHECK(ai != nullptr);
     struct sockaddr* addr = ai->ai_addr;
     socklen_t len = ai->ai_addrlen;
@@ -84,6 +84,10 @@ struct SockAddr {
   }
 
   SockAddr(const struct AddrInfo& ai) : SockAddr(ai.ai->ai_addr, ai.ai->ai_addrlen) {
+  }
+
+  std::string AddrStr(int protocol = SOCK_STREAM) {
+    return AddrInfo::AddrStr(&addr, addrlen, protocol);
   }
 };
 
@@ -224,7 +228,7 @@ class TcpSocket : public Socket {
     return recv(sockfd, buf, len, flags);
   }
 
-  inline ssize_t SendAll(const void* buf, size_t len, int flags = 0) {
+  inline size_t SendAll(const void* buf, size_t len, int flags = 0) {
     const char* cbuf = static_cast<const char*>(buf);
     size_t n = 0;
     while (n < len) {
@@ -238,7 +242,7 @@ class TcpSocket : public Socket {
     return n;
   }
 
-  inline ssize_t RecvAll(void* buf, size_t len, int flags = 0) {
+  inline size_t RecvAll(void* buf, size_t len, int flags = 0) {
     char* cbuf = static_cast<char*>(buf);
     size_t n = 0;
     while (n < len) {

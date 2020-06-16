@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <cstdlib>
 
 /// for small buffers, typically smaller than megabytes, malloc and free is as
 /// fast as several nanoseconds, so to avoid the mutex and thread
@@ -32,9 +33,9 @@ class Buffer {
 
   Buffer(size_t size)
       : size_{size}, msg_length_{0}, bytes_handled_{0}, is_owner_{true} {
-    ptr_ = static_cast<char*>(malloc(size_));
-    // int rc = posix_memalign(&ptr, 4096, size);
-    RPC_CHECK(ptr_) << "malloc failed";
+    // ptr_ = static_cast<char*>(malloc(size_));
+    int rc = posix_memalign(reinterpret_cast<void**>(&ptr_), 4096, size);
+    RPC_CHECK_EQ(rc, 0) << "posix_memalign failed";
   }
 
   Buffer(const void* ptr, size_t size, uint32_t msg_length)
