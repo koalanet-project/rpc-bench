@@ -32,6 +32,7 @@ RUN yaourt -S --noconfirm --needed \
     unzip-iconv \
     htop \
     wget curl mtr iputils \
+    perf \
     gnupg \
     openbsd-netcat
 
