@@ -20,7 +20,7 @@ message PbBwMessage {
   // The header
   PbBwHeader header = 1;
   // A piece of unserialized (intentionally) data whose size could be very large
-  string data = 2;
+  bytes data = 2;
 }
 
 // The response of BwService which only contains a copy of the request's header
