@@ -20,7 +20,7 @@ void ShowUsage(const char* app) {
   fprintf(stdout, "\nOptions:\n");
   fprintf(stdout, "  -p, --port=<int>    the port to listen on or connect to, (default %d)\n", kDefaultPort);
   fprintf(stdout, "  -a, --app=<str>     benchmark app, a string in ['bandwidth', 'latency', 'throughput']\n");
-  fprintf(stdout, "  -r, --rpc=<str>     rpc library, a string in ['grpc', 'thrift', 'brpc']\n");
+  fprintf(stdout, "  -r, --rpc=<str>     rpc library, a string in ['grpc', 'socket', 'thrift', 'brpc']\n");
   fprintf(stdout, "  -d, --data=<size>   additional data size per request, (default %ld)\n", kDefaultDataSize);
   fprintf(stdout, "\nServer specific:\n");
   fprintf(stdout, "  --persistent        persistent server, (default %s)\n", kDefaultPersistent ? "true" : "false");
@@ -46,7 +46,7 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
   };  // clang-format on
   while (1) {
     int option_index = 0, c;
-    c = getopt_long(argc, argv, "hp:a:r:P:d:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hp:a:r:P:d:t:", long_options, &option_index);
     if (c == -1) break;
     switch (c) {
       case 'h': {
