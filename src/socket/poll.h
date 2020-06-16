@@ -21,7 +21,7 @@ class Interest {
    * Interest::WRITABLE with implicit type conversion.
    */
   Interest(uint8_t interest) {
-    RPC_CHECK(interest == READABLE || interest == WRITABLE);
+    RPC_CHECK(interest <= (READABLE | WRITABLE));
     inner_ = interest;
   }
   inline operator uint8_t() const {
@@ -79,8 +79,12 @@ namespace sys {
 
 namespace linux {
 inline uint32_t InterestToEpoll(Interest interest) {
+  /// EPOLLERR  Error condition happened on the associated file descriptor.  This event is also
+  /// reported for the write end of a pipe when the read end has been closed. epoll_wait(2) will
+  /// always report for this event; it is not necessary to set it in events when calling
+  /// epoll_ctl().
   // let's just use level-trigger because it's less error prone and still efficient
-  uint32_t kind = 0;  
+  uint32_t kind = 0;
   if (interest.IsReadable()) {
     kind |= EPOLLIN;
   }
@@ -105,6 +109,10 @@ class Selector {
   Selector(int flags) {
     epollfd_ = epoll_create1(flags);
     PCHECK(epollfd_ >= 0) << "epoll_create1 error, flags: " << flags;
+  }
+  Selector(const Selector& other) {
+    epollfd_ = dup(other.epollfd_);
+    PCHECK(epollfd_ >= 0) << "dup, other.epollfd_: " << other.epollfd_;
   }
   ~Selector() {
     if (epollfd_ != INVALID_FD) {
@@ -209,6 +217,8 @@ class Event {
   struct epoll_event event_;
 };
 
+static_assert(sizeof(Event) == sizeof(struct epoll_event));
+
 }  // namespace linux
 
 #ifdef __linux__
@@ -244,6 +254,8 @@ class Event {
  private:
   sys::Event inner_;
 };
+
+static_assert(sizeof(Event) == sizeof(sys::Event));
 
 class Registry;
 
@@ -322,6 +334,8 @@ class Poll {
  private:
   Registry registry_;
 };
+
+static_assert(sizeof(Poll) == sizeof(RawFd));
 
 }  // namespace socket
 }  // namespace rpc_bench

@@ -1,3 +1,4 @@
+
 #include "bw_app.h"
 
 namespace rpc_bench {
@@ -14,9 +15,13 @@ int BwClientApp::Run() {
   /// somewhere inefficient implementation (e.g. unnecessarry copy, context
   /// switch of task spreading, or fail to pipelining serialization and network IO).
   BwMessage bw_msg;
+  bw_msg.header.field1 = 1;
+  bw_msg.header.field2 = true;
+  bw_msg.header.field3 = "stuff";
   bw_msg.data.resize(opts_.data_size);
   auto start = std::chrono::high_resolution_clock::now();
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
+  meter_ = Meter(1000, "meter", 1);
   while (1) {
     BwAck ack;
     PushData(bw_msg, &ack);

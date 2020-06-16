@@ -23,6 +23,7 @@ void SocketBwClientApp::Init() {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 
+  RPC_LOG(DEBUG) << "connected to: " << ai.AddrStr();
   send_buffer_.resize(kDefaultBufferSize);
   recv_buffer_.resize(kDefaultBufferSize);
 }
@@ -33,20 +34,23 @@ void SocketBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   PackPbBwHeader(bw_msg.header, &pb_header);
   size_t header_size = pb_header.ByteSizeLong();
   size_t data_size = bw_msg.data.size();
+  RPC_LOG(TRACE) << "header_size: " << header_size << ", data_size: " << data_size;
   // write meta header
+  size_t meta_size = 2 * sizeof(uint32_t);
   *reinterpret_cast<uint32_t*>(send_buffer_.data()) = header_size;
   *reinterpret_cast<uint32_t*>(send_buffer_.data() + sizeof(uint32_t)) = data_size;
   // write message header
-  pb_header.SerializeToArray(send_buffer_.data() + 2 * sizeof(uint32_t), header_size);
-  RPC_CHECK_EQ(header_size, sock_.SendAll(send_buffer_.data(), header_size, 0));
+  pb_header.SerializeToArray(send_buffer_.data() + meta_size, header_size);
+  RPC_CHECK_EQ(header_size + meta_size,
+               sock_.SendAll(send_buffer_.data(), header_size + meta_size, 0));
   // write message data
   RPC_CHECK_EQ(data_size, sock_.SendAll(bw_msg.data.data(), data_size, 0));
 
   // receive and de-serialize
   size_t r = sock_.RecvAll(recv_buffer_.data(), header_size, 0);
   if (r < header_size) {
-    RPC_LOG(ERROR) << "only " << r << " vs " << header_size
-                   << " bytes received, peer has performed an orderly shutdown";
+    RPC_LOG(ERROR) << "only " << r << " ( expected " << header_size
+                   << ") bytes received, peer has performed an orderly shutdown";
     bw_ack->success = false;
   } else {
     bw_ack->success = true;
@@ -76,6 +80,8 @@ void SocketBwServerApp::Init() {
 }
 
 int SocketBwServerApp::Run() {
+  Init();
+
   int timeout_ms = prism::GetEnvOrDefault<int>("EPOLL_TIMEOUT_MS", 1000);
   int max_events = prism::GetEnvOrDefault<int>("EPOLL_MAX_EVENTS", 1024);
   // never resize this vector

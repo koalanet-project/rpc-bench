@@ -12,8 +12,8 @@ namespace socket {
 class SocketBwServerApp;
 
 /// COMMENT(cjr): before we introduce the concept of `Call`, the TxQueue and
-/// RxPoll always have one or two elements at the same time, because there are
-/// no concurrent RPC requests, and there is only single type of request.
+/// RxPoll always have at most one or two elements at the same time, because
+/// there is no concurrent RPC request, and there is only single type of request.
 class BwServerEndpoint {
  public:
   using BufferPtr = std::unique_ptr<Buffer>;
@@ -37,6 +37,7 @@ class BwServerEndpoint {
 
   void HandleReceivedData(BufferPtr buffer);
 
+  bool ReceiveMeta();
   bool ReceiveHeader();
   bool ReceiveData();
   bool Reply();
@@ -69,8 +70,10 @@ class BwServerEndpoint {
   // a coroutine
   enum class State {
     NEW_RPC,
+    META_RECVED,
     HEADER_RECVED,
     DATA_RECVED,
+    REPLYING,
   };
 
   State state_;

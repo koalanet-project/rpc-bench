@@ -26,7 +26,7 @@ void ShowUsage(const char* app) {
   fprintf(stdout, "  --persistent        persistent server, (default %s)\n", kDefaultPersistent ? "true" : "false");
   fprintf(stdout, "\nClient specific:\n");
   fprintf(stdout, "  -P, --proto=<file>  protobuf format file\n");
-  fprintf(stdout, "  -t, --time          # time in seconds to transmit for, (default %d secs)", kDefaultTimeSec);
+  fprintf(stdout, "  -t, --time          # time in seconds to transmit for, (default %d secs)\n", kDefaultTimeSec);
   // clang-format on
 }
 
