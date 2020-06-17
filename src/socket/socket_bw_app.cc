@@ -44,6 +44,10 @@ void SocketBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   RPC_CHECK_EQ(header_size + meta_size,
                sock_.SendAll(send_buffer_.data(), header_size + meta_size, 0));
   // write message data
+  // memcpy(send_buffer_.data(), bw_msg.data.data(), data_size);
+  // RPC_CHECK_EQ(data_size, sock_.SendAll(send_buffer_.data(), data_size, 0));
+  // whether to do copy here only affect the cpu utilization, it has negligible
+  // influence in bandwidth throughput
   RPC_CHECK_EQ(data_size, sock_.SendAll(bw_msg.data.data(), data_size, 0));
 
   // receive and de-serialize

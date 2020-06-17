@@ -33,6 +33,7 @@ RUN yaourt -S --noconfirm --needed \
     htop \
     wget curl mtr iputils \
     perf \
+    sysstat \
     gnupg \
     openbsd-netcat
 

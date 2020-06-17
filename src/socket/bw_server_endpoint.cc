@@ -91,10 +91,18 @@ bool BwServerEndpoint::ReceiveMeta() {
   uint32_t header_size = meta_buffer[0];
   uint32_t data_size = meta_buffer[1];
   // allocate buffer
-  header_buffer_ = std::make_unique<Buffer>(header_size);
-  header_buffer_->set_msg_length(header_size);
-  data_buffer_ = std::make_unique<Buffer>(data_size);
-  data_buffer_->set_msg_length(data_size);
+  if (!header_buffer_owner_ ||
+      (header_buffer_owner_ && header_buffer_owner_->msg_length() < header_size)) {
+    header_buffer_owner_ = std::make_unique<Buffer>(header_size);
+    header_buffer_owner_->set_msg_length(header_size);
+  }
+  if (!data_buffer_owner_ ||
+      (data_buffer_owner_ && data_buffer_owner_->msg_length() < data_size)) {
+    data_buffer_owner_ = std::make_unique<Buffer>(data_size);
+    data_buffer_owner_->set_msg_length(data_size);
+  }
+  header_buffer_ = std::make_unique<Buffer>(header_buffer_owner_.get());
+  data_buffer_ = std::make_unique<Buffer>(data_buffer_owner_.get());
   state_ = State::META_RECVED;
   DLOG(TRACE) << "header_size: " << header_size << ", data_size: " << data_size;
   return true;

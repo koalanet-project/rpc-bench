@@ -63,6 +63,8 @@ class BwServerEndpoint {
   Interest interest_;
   TxQueue tx_queue_;
   RxPool rx_pool_;
+  BufferPtr header_buffer_owner_;
+  BufferPtr data_buffer_owner_;
   BufferPtr header_buffer_;
   BufferPtr data_buffer_;
   BufferPtr reply_buffer_;
