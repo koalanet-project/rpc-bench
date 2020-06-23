@@ -26,11 +26,14 @@ RUN yaourt -S --noconfirm --needed \
     python python2 python-pip python2-pip \
     openssh \
     tmux screen \
+    iperf \
     rsync \
     tree \
     unzip-iconv \
     htop \
     wget curl mtr iputils \
+    perf \
+    sysstat \
     gnupg \
     openbsd-netcat
 

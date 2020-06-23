@@ -24,12 +24,8 @@ using ::rpc_bench::bw_app::BwService;
 using ::rpc_bench::bw_app::PbBwAck;
 using ::rpc_bench::bw_app::PbBwHeader;
 using ::rpc_bench::bw_app::PbBwMessage;
-
-void PackPbBwMessage(const BwMessage& bw_msg, PbBwMessage* pb_bw_msg);
-
-void PackPbBwHeader(const BwHeader bw_header, PbBwHeader* pb_bw_header);
-
-void UnpackPbBwHeader(BwHeader* bw_header, const PbBwHeader& pb_bw_header);
+using ::rpc_bench::bw_app::StopRequest;
+using ::rpc_bench::bw_app::StopResponse;
 
 class GrpcBwClientApp final : public BwClientApp {
  public:
@@ -37,7 +33,7 @@ class GrpcBwClientApp final : public BwClientApp {
 
   virtual void Init() override;
 
-  virtual void IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) override;
+  virtual void PushData(const BwMessage& bw_msg, BwAck* bw_ack) override;
 
  private:
   std::unique_ptr<BwService::Stub> stub_;
@@ -46,12 +42,14 @@ class GrpcBwClientApp final : public BwClientApp {
 using ::grpc::Server;
 using ::grpc::ServerBuilder;
 using ::grpc::ServerContext;
+using ::grpc::ResourceQuota;
 
 // Logic and data behind the server's behavior.
 class BwServiceImpl final : public BwService::Service {
  public:
   BwServiceImpl() : meter_{1000} {}
-  Status Request(ServerContext* context, const PbBwMessage* request, PbBwAck* reply) override;
+  Status PushData(ServerContext* context, const PbBwMessage* request, PbBwAck* reply) override;
+  Status StopServer(ServerContext* context, const StopRequest* req, StopResponse* res) override;
   Meter meter_;
 };
 

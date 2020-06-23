@@ -3,6 +3,7 @@
 #include "app.h"
 #include "command_opts.h"
 #include "meter.h"
+#include "protos/bw_app.pb.h"
 
 namespace rpc_bench {
 
@@ -25,6 +26,13 @@ struct BwAck {
   bool success;
 };
 
+void PackPbBwMessage(const BwMessage& bw_msg, bw_app::PbBwMessage* pb_bw_msg);
+
+void PackPbBwHeader(const BwHeader bw_header, bw_app::PbBwHeader* pb_bw_header);
+
+void UnpackPbBwHeader(BwHeader* bw_header, const bw_app::PbBwHeader& pb_bw_header);
+
+
 class BwServerApp : public App {
  public:
   BwServerApp(CommandOpts opts) : App(opts) {}
@@ -44,7 +52,16 @@ class BwClientApp : public App {
 
   virtual void Init() = 0;
 
-  virtual void IssueBwReq(const BwMessage& bw_msg, BwAck* bw_ack) = 0;
+  /*!
+   * \brief push data from client to server
+   * \param bw_msg a message that contains the header and additional data (no
+   *        need to serialize)
+   * \param bw_ack a ack message only contains a copy of the request header
+   * 
+   * To maximize the bandwidth usage, the API should be designed to return early
+   * to overlap the real transmission and serialization.
+   */
+  virtual void PushData(const BwMessage& bw_msg, BwAck* bw_ack) = 0;
 
  private:
   Meter meter_;
