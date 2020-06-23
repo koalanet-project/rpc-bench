@@ -42,6 +42,7 @@ class GrpcBwClientApp final : public BwClientApp {
 using ::grpc::Server;
 using ::grpc::ServerBuilder;
 using ::grpc::ServerContext;
+using ::grpc::ResourceQuota;
 
 // Logic and data behind the server's behavior.
 class BwServiceImpl final : public BwService::Service {

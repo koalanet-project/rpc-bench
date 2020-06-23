@@ -4,9 +4,11 @@
 #include <grpcpp/health_check_service_interface.h>
 
 #include <limits>
+#include <thread>
 
 #include "bw_app.h"
 #include "command_opts.h"
+#include "prism/utils.h"
 
 namespace rpc_bench {
 namespace grpc {
@@ -58,6 +60,14 @@ void GrpcBwServerApp::Init() {
   ::grpc::EnableDefaultHealthCheckService(true);
   ::grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
+
+  int hardware_concurreny = std::thread::hardware_concurrency();
+  int new_max_threads = prism::GetEnvOrDefault<int>("RPC_BENCH_GRPC_MAX_THREAD", hardware_concurreny);
+  RPC_LOG(DEBUG) << "gRPC thread pool is set to use " << new_max_threads << " threads";
+
+  ResourceQuota quota;
+  quota.SetMaxThreads(new_max_threads);
+  builder.SetResourceQuota(quota);
   builder.SetMaxMessageSize(std::numeric_limits<int>::max());
   builder.AddListeningPort(bind_uri, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
