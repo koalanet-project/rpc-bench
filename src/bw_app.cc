@@ -1,5 +1,6 @@
 
 #include "bw_app.h"
+#include "prism/utils.h"
 
 namespace rpc_bench {
 
@@ -19,15 +20,20 @@ int BwClientApp::Run() {
   bw_msg.header.field2 = true;
   bw_msg.header.field3 = "stuff";
   bw_msg.data.resize(opts_.data_size);
+  size_t total_bytes = 0;
   auto start = std::chrono::high_resolution_clock::now();
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
   meter_ = Meter(1000, "meter", 1);
   while (1) {
     BwAck ack;
     PushData(bw_msg, &ack);
+    total_bytes += bw_msg.Size();
     meter_.AddBytes(bw_msg.Size());
     auto now = std::chrono::high_resolution_clock::now();
     if (now - start > time_dura) {
+      RPC_LOG(INFO) << prism::FormatString(
+          "Transfer %.2f GBytes in %.2f seconds. Speed: %.2f Gb/s", total_bytes / 1e9,
+          (now - start).count() / 1e9, 8.0 * total_bytes / (now - start).count());
       break;
     }
   }
