@@ -44,11 +44,12 @@ void SocketBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   RPC_CHECK_EQ(header_size + meta_size,
                sock_.SendAll(send_buffer_.data(), header_size + meta_size, 0));
   // write message data
-  // memcpy(send_buffer_.data(), bw_msg.data.data(), data_size);
-  // RPC_CHECK_EQ(data_size, sock_.SendAll(send_buffer_.data(), data_size, 0));
+
   // whether to do copy here only affect the cpu utilization, it has negligible
   // influence in bandwidth throughput
   RPC_CHECK_EQ(data_size, sock_.SendAll(bw_msg.data.data(), data_size, 0));
+  // memcpy(send_buffer_.data(), bw_msg.data.data(), data_size);
+  // RPC_CHECK_EQ(data_size, sock_.SendAll(send_buffer_.data(), data_size, 0));
 
   // receive and de-serialize
   size_t r = sock_.RecvAll(recv_buffer_.data(), header_size, 0);
@@ -91,11 +92,10 @@ int SocketBwServerApp::Run() {
   // never resize this vector
   std::vector<Event> events(max_events);
 
-  std::queue<std::shared_ptr<BwServerEndpoint>> dead_eps;
-
   while (1) {
     // Epoll IO
     int nevents = poll_.PollOnce(&events[0], max_events, std::chrono::milliseconds(timeout_ms));
+    PCHECK(nevents >= 0) << "PollOnce";
 
     for (int i = 0; i < nevents; i++) {
       auto& ev = events[i];
@@ -118,20 +118,9 @@ int SocketBwServerApp::Run() {
       }
 
       if (ev.IsError() || ev.IsReadClosed() || ev.IsWriteClosed()) {
-        std::string remote_uri = endpoint->sock_addr().AddrStr();
-        RPC_LOG(ERROR) << "EPOLLERR, endpoint uri: " << remote_uri;
         endpoint->OnError();
-        std::shared_ptr<BwServerEndpoint> resource = endpoints_.extract(endpoint->fd()).mapped();
-        dead_eps.push(resource);
+        endpoints_.erase(endpoint->fd());
       }
-    }
-
-    // garbage collection
-    while (!dead_eps.empty()) {
-      auto resource = std::move(dead_eps.front());
-      poll_.registry().Deregister(resource->sock());
-      resource->Disconnect();
-      dead_eps.pop();
     }
   }
 

@@ -25,10 +25,6 @@ BwServerEndpoint::~BwServerEndpoint() {
   }
 }
 
-void BwServerEndpoint::Disconnect() {
-  sock_.Close();
-}
-
 void BwServerEndpoint::OnAccepted() {
   GetPeerAddr();
   sock_.SetNonBlock(true);
@@ -45,6 +41,10 @@ void BwServerEndpoint::GetPeerAddr() {
 }
 
 void BwServerEndpoint::OnError() {
+  RPC_LOG(ERROR) << "Socket error: " << sock_.GetSockError()
+                 << ", remote uri: " << sock_addr_.AddrStr();
+  app_->poll().registry().Deregister(sock_);
+  sock_.Close();
 }
 
 void BwServerEndpoint::OnRecvReady() {
@@ -84,7 +84,6 @@ void BwServerEndpoint::OnRecvReady() {
 bool BwServerEndpoint::ReceiveMeta() {
   uint32_t meta_buffer[2];
   // force blocking receive here
-  // PCHECK(sock_.RecvAll(meta_buffer, sizeof(meta_buffer)) == sizeof(meta_buffer));
   if (sock_.RecvAll(meta_buffer, sizeof(meta_buffer)) < sizeof(meta_buffer)) {
     return false;
   }

@@ -25,8 +25,6 @@ class BwServerEndpoint {
 
   ~BwServerEndpoint();
 
-  void Disconnect();
-
   void OnAccepted();
 
   void OnSendReady();

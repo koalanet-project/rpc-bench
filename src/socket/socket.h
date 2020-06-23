@@ -110,6 +110,13 @@ class Socket {
     return errsv == EAGAIN || errsv == EWOULDBLOCK;
   }
 
+  inline int GetSockError() const {
+    int error = 0;
+    socklen_t len = sizeof(error);
+    PCHECK(!getsockopt(sockfd,  SOL_SOCKET, SO_ERROR, &error, &len));
+    return error;
+  }
+
   inline void SetNonBlock(bool non_block) {
     int flags;
     flags = fcntl(sockfd, F_GETFL);
@@ -234,7 +241,8 @@ class TcpSocket : public Socket {
     while (n < len) {
       ssize_t r = Send(cbuf + n, len - n, flags);
       if (r == -1) {
-        PCHECK(LastErrorWouldBlock()) << "errno: " << GetLastError();
+        LOG_IF(ERROR, !LastErrorWouldBlock()) << "socket error: " << GetSockError();
+        break;
       } else {
         n += r;
       }
@@ -248,7 +256,8 @@ class TcpSocket : public Socket {
     while (n < len) {
       ssize_t r = Recv(cbuf + n, len - n, flags);
       if (r == -1) {
-        PCHECK(LastErrorWouldBlock()) << "errno: " << GetLastError();
+        LOG_IF(ERROR, !LastErrorWouldBlock()) << "socket error: " << GetSockError();
+        break;
       } else if (r == 0) {
         break;
       } else {
