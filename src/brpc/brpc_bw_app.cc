@@ -27,6 +27,7 @@ void BrpcBwClientApp::Init() {
 
 void BrpcBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   if (::brpc::IsAskedToQuit()) {
+    bw_ack->success = false;
     return;
   }
 
