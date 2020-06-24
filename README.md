@@ -11,13 +11,15 @@ Options:
   -a, --app=<str>     benchmark app, a string in ['bandwidth', 'latency', 'throughput']
   -r, --rpc=<str>     rpc library, a string in ['grpc', 'socket', 'thrift', 'brpc']
   -d, --data=<size>   additional data size per request, (default 0)
+  --monitor-time=<int>  # time in seconds to monitor cpu utilization
+  --warmup=<int>      # time in seconds to wait before start monitoring cpu, (default 1 secs if monitor-time is set)
 
 Server specific:
   --persistent        persistent server, (default false)
 
 Client specific:
   -P, --proto=<file>  protobuf format file
-  -t, --time          # time in seconds to transmit for, (default 10 secs)
+  -t, --time=<int>    # time in seconds to transmit for, (default 10 secs)
 ```
 
 ## Build
