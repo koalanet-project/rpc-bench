@@ -1,6 +1,6 @@
-
 #include "bw_app.h"
 #include "prism/utils.h"
+#include "logging.h"
 
 namespace rpc_bench {
 

@@ -1,6 +1,8 @@
-#include <stdio.h>
 #include <getopt.h>
+#include <stdio.h>
 #include <stdlib.h>
+
+#include <memory>
 
 #include "app.h"
 #include "command_opts.h"

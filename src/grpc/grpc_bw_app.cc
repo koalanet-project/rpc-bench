@@ -9,6 +9,7 @@
 #include "bw_app.h"
 #include "command_opts.h"
 #include "prism/utils.h"
+#include "logging.h"
 
 namespace rpc_bench {
 namespace grpc {

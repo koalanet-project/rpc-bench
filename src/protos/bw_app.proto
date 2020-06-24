@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package rpc_bench.bw_app;
 
+option cc_generic_services = false;
+
 service BwService {
   rpc PushData (PbBwMessage) returns (PbBwAck) {}
   rpc StopServer (StopRequest) returns (StopResponse) {}
