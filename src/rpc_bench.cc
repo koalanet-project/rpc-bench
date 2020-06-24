@@ -146,7 +146,9 @@ int main(int argc, char* argv[]) {
   std::cout << "Parsed options: " << opts.DebugString() << std::endl;
 
   /// start cpu monitor
-  std::thread(CpuMonitor, opts).detach();
+  if (opts.monitor_time_sec.has_value()) {
+    std::thread(CpuMonitor, opts).detach();
+  }
 
   /// create and run app
   auto app = std::unique_ptr<App>(App::Create(opts));  // copy opts

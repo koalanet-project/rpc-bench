@@ -31,7 +31,7 @@ struct CommandOpts {
     data_size = kDefaultDataSize;
     persistent = kDefaultPersistent;
     time_duration_sec = kDefaultTimeSec;
-    monitor_time_sec = kDefaultWarmupTimeSec;
+    monitor_warmup_sec = kDefaultWarmupTimeSec;
   }
 
   std::string DebugString() {
