@@ -2,7 +2,6 @@
 #define RPC_BENCH_APP_H_
 #include <iostream>
 #include "command_opts.h"
-#include "logging.h"
 
 namespace rpc_bench {
 

@@ -1,6 +1,6 @@
-
 #include "bw_app.h"
 #include "prism/utils.h"
+#include "logging.h"
 
 namespace rpc_bench {
 
@@ -27,6 +27,8 @@ int BwClientApp::Run() {
   while (1) {
     BwAck ack;
     PushData(bw_msg, &ack);
+    RPC_CHECK(ack.success) << "PushData failed.";
+
     total_bytes += bw_msg.Size();
     meter_.AddBytes(bw_msg.Size());
     auto now = std::chrono::high_resolution_clock::now();

@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "logging.h"
 #include "prism/utils.h"
 
 namespace rpc_bench {
@@ -22,7 +21,7 @@ struct Meter {
       : name{name}, cnt{0}, bytes{0}, qps{0}, tp{Clock::now()} {
     interval = milliseconds(interval_ms);
     sample = RoundUpPower2(_sample + 1) - 1;
-    RPC_CHECK_EQ(sample + 1, Lowbit(sample + 1)) << "sample must be 2^n-1";
+    assert(sample + 1 == Lowbit(sample + 1) && "sample must be 2^n-1");
     disable = prism::GetEnvOrDefault<int>("RPC_BENCH_DISABLE_METER", 0);
   }
 
