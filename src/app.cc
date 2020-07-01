@@ -4,6 +4,7 @@
 #include "grpc/grpc_bw_app.h"
 #include "socket/socket_bw_app.h"
 #include "brpc/brpc_bw_app.h"
+#include "zeromq/zeromq_bw_app.h"
 #include "logging.h"
 
 namespace rpc_bench {
@@ -21,6 +22,9 @@ App* App::Create(CommandOpts opts) {
     } else if (opts.rpc.value() == "brpc") {
       return opts.is_server.value() ? static_cast<App*>(new brpc::BrpcBwServerApp(opts))
                                     : static_cast<App*>(new brpc::BrpcBwClientApp(opts));
+    } else if (opts.rpc.value() == "zeromq") {
+      return opts.is_server.value() ? static_cast<App*>(new zeromq::ZeromqBwServerApp(opts))
+                                    : static_cast<App*>(new zeromq::ZeromqBwClientApp(opts));
     }
   } else {
     RPC_UNIMPLEMENTED

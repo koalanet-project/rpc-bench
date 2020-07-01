@@ -15,10 +15,12 @@ CFLAGS += -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLA
 PROTOBUF_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
 GRPC_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
 BRPC_LIBS := -lbrpc -lgflags -lleveldb ${PROTOBUF_LIBS}
+ZEROMQ_LIBS := -lzmq
 
 LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
 		$(GRPC_LIBS) \
 		$(BRPC_LIBS) \
+		$(ZEROMQ_LIBS) \
 		-lpthread \
 		-Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
 		-ldl
