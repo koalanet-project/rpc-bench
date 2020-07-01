@@ -72,7 +72,7 @@ $(PROTO_PATH)/%.grpc.pb.cc $(PROTO_PATH)/%.grpc.pb.h: $(PROTO_PATH)/%.proto $(GR
 	#mv $<.tmp.grpc.pb.h %.grpc.pb.h
 	#rm -fv $<.tmp
 
-build/%.o: src/%.cc $(GEN_HEADERS) $(GRPC) $(BRPC)
+build/%.o: src/%.cc $(GEN_HEADERS) $(GRPC) $(BRPC) $(ZEROMQ)
 	@mkdir -p $(@D)
 	$(CXX) $(INCPATH) $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) $(INCPATH) $(CFLAGS) -c $< -o $@

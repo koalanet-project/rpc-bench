@@ -55,3 +55,11 @@ $(BRPC): $(GFLAGS) $(LEVELDB) $(GRPC)
 	$(WGET) $(URL)/$(FILE) && tar --no-same-owner -zxf $(FILE)
 	cd $(DIR) && sed -i '173s#\(.*\)-lssl -lcrypto\(.*\)#\1/usr/lib/libssl.so /usr/lib/libcrypto.so\2#g' config_brpc.sh && PATH=$(DEPS_PATH)/bin:$(PATH) sh config_brpc.sh --headers="$(DEPS_PATH)/include /usr/include" --libs="$(DEPS_PATH)/lib /usr/lib64" && $(MAKE) && cp -r output/* $(DEPS_PATH)
 	rm -rf $(FILE) $(DIR)
+
+ZEROMQ := $(DEPS_PATH)/include/zmq.h
+$(ZEROMQ):
+	$(eval DIR=libzmq)
+	rm -rf $(DIR)
+	git clone https://github.com/zeromq/libzmq
+	cd $(DIR) && mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) .. && $(MAKE) && $(MAKE) install
+	rm -rf $(DIR)
