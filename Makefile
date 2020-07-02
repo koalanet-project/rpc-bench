@@ -15,10 +15,12 @@ CFLAGS += -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLA
 PROTOBUF_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
 GRPC_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
 BRPC_LIBS := -lbrpc -lgflags -lleveldb ${PROTOBUF_LIBS}
+ZEROMQ_LIBS := -lzmq
 
 LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
 		$(GRPC_LIBS) \
 		$(BRPC_LIBS) \
+		$(ZEROMQ_LIBS) \
 		-lpthread \
 		-Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
 		-ldl
@@ -70,7 +72,7 @@ $(PROTO_PATH)/%.grpc.pb.cc $(PROTO_PATH)/%.grpc.pb.h: $(PROTO_PATH)/%.proto $(GR
 	#mv $<.tmp.grpc.pb.h %.grpc.pb.h
 	#rm -fv $<.tmp
 
-build/%.o: src/%.cc $(GEN_HEADERS) $(GRPC) $(BRPC)
+build/%.o: src/%.cc $(GEN_HEADERS) $(GRPC) $(BRPC) $(ZEROMQ)
 	@mkdir -p $(@D)
 	$(CXX) $(INCPATH) $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) $(INCPATH) $(CFLAGS) -c $< -o $@
