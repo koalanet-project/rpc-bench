@@ -24,6 +24,8 @@ class ZeromqBwClientApp final : public BwClientApp {
 
   void PushDataZero(const BwMessage& bw_msg, BwAck* bw_ack);
 
+  void PushDataNaive(const BwMessage& bw_msg, BwAck* bw_ack);
+
  private:
   void* zmq_context_;
   void* zmq_requester_;
@@ -37,11 +39,15 @@ class ZeromqBwServerApp final : public BwServerApp {
   virtual void Init() override;
 
   virtual int Run() override;
-  int Run2();
+
+  int RunZero();
+
+  int RunNaive();
 
  private:
   void* zmq_context_;
   void* zmq_responder_;
+  Meter meter_;
 };
 
 }  // namespace zeromq

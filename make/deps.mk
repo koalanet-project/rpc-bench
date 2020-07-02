@@ -58,8 +58,9 @@ $(BRPC): $(GFLAGS) $(LEVELDB) $(GRPC)
 
 ZEROMQ := $(DEPS_PATH)/include/zmq.h
 $(ZEROMQ):
-	$(eval DIR=libzmq)
+	$(eval FILE=zeromq-4.3.2.tar.gz)
+	$(eval DIR=zeromq-4.3.2)
 	rm -rf $(DIR)
-	git clone https://github.com/zeromq/libzmq
+	$(WGET) https://github.com/zeromq/libzmq/releases/download/v4.3.2/zeromq-4.3.2.tar.gz && tar --no-same-owner -zxf $(FILE)
 	cd $(DIR) && mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) .. && $(MAKE) && $(MAKE) install
-	rm -rf $(DIR)
+	rm -rf $(FILE) $(DIR)

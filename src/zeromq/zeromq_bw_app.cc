@@ -18,7 +18,6 @@ inline void FreeData(void* data, void* hint) {
   }
 }
 
-
 // ZeromqBwClientApp
 void ZeromqBwClientApp::Init() {
   std::string remote_uri = opts_.host.value() + ":" + std::to_string(opts_.port);
@@ -32,17 +31,15 @@ void ZeromqBwClientApp::Init() {
 void ZeromqBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   // use zero copy push data
   return PushDataZero(bw_msg, bw_ack);
+}
 
+void ZeromqBwClientApp::PushDataNaive(const BwMessage &bw_msg, BwAck *bw_ack) {
   bw_app::PbBwHeader pb_header;
   size_t header_size = pb_header.ByteSizeLong();
   size_t data_size = bw_msg.data.size();
-  // write message data
 
-  // whether to do copy here only affect the cpu utilization, it has negligible
-  // influence in bandwidth throughput
+  // write message data
   RPC_CHECK_EQ(data_size, zmq_send(zmq_requester_, bw_msg.data.data(), data_size, 0));
-  // memcpy(send_buffer_.data(), bw_msg.data.data(), data_size);
-  // RPC_CHECK_EQ(data_size, sock_.SendAll(send_buffer_.data(), data_size, 0));
 
   // receive and de-serialize
   RPC_CHECK_EQ(header_size, zmq_recv(zmq_requester_, &recv_buffer_[0], header_size, 0));
@@ -98,11 +95,14 @@ int ZeromqBwServerApp::Run() {
   Init();
 
   // use zmq multi-part aware receive
-  return Run2();
+  return RunZero();
+}
 
+int ZeromqBwServerApp::RunNaive() {
   char recv_buffer[1048576];
   while (true) {
     int bytes_recv = zmq_recv(zmq_responder_, recv_buffer, 1048576, 0);
+    if (bytes_recv > 0) meter_.AddBytes(bytes_recv);
     bw_app::PbBwHeader pb_header;
     size_t header_size = pb_header.ByteSizeLong();
     // for now, just send some dummy reply
@@ -110,7 +110,7 @@ int ZeromqBwServerApp::Run() {
   }
 }
 
-int ZeromqBwServerApp::Run2() {
+int ZeromqBwServerApp::RunZero() {
   bw_app::PbBwHeader pb_header;
   size_t header_size = pb_header.ByteSizeLong();
   while (true) {
@@ -118,6 +118,7 @@ int ZeromqBwServerApp::Run2() {
     RPC_CHECK_EQ(0, zmq_msg_init(&zmsg)) << zmq_strerror(errno);
     while (true) {
       int bytes_recv = zmq_msg_recv(&zmsg, zmq_responder_, 0);
+      if (bytes_recv > 0) meter_.AddBytes(bytes_recv);
       if (!zmq_msg_more(&zmsg)) break;
     }
 
