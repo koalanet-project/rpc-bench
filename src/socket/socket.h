@@ -241,7 +241,8 @@ class TcpSocket : public Socket {
     while (n < len) {
       ssize_t r = Send(cbuf + n, len - n, flags);
       if (r == -1) {
-        LOG_IF(ERROR, !LastErrorWouldBlock()) << "socket error: " << GetSockError();
+        if (LastErrorWouldBlock()) continue;
+        LOG(ERROR) << "socket error: " << GetSockError();
         break;
       } else {
         n += r;
@@ -256,7 +257,8 @@ class TcpSocket : public Socket {
     while (n < len) {
       ssize_t r = Recv(cbuf + n, len - n, flags);
       if (r == -1) {
-        LOG_IF(ERROR, !LastErrorWouldBlock()) << "socket error: " << GetSockError();
+        if (LastErrorWouldBlock()) continue;
+        LOG(ERROR) << "socket error: " << GetSockError();
         break;
       } else if (r == 0) {
         break;

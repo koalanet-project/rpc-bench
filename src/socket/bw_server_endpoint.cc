@@ -87,6 +87,7 @@ bool BwServerEndpoint::ReceiveMeta() {
   if (sock_.RecvAll(meta_buffer, sizeof(meta_buffer)) < sizeof(meta_buffer)) {
     return false;
   }
+
   uint32_t header_size = meta_buffer[0];
   uint32_t data_size = meta_buffer[1];
   // allocate buffer
@@ -122,6 +123,11 @@ bool BwServerEndpoint::ReceiveHeader() {
 }
 
 bool BwServerEndpoint::ReceiveData() {
+  if (data_buffer_->size() == 0) {
+    state_ = State::DATA_RECVED;
+    reply_buffer_ = std::make_unique<Buffer>(header_buffer_.get());
+    return true;
+  }
   ssize_t nbytes = sock_.Recv(data_buffer_->GetRemainBuffer(), data_buffer_->GetRemainSize());
   DLOG(TRACE) << "ReceiveData: " << nbytes;
   if (nbytes == -1) {
