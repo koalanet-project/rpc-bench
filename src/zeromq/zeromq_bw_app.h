@@ -21,6 +21,9 @@ class ZeromqBwClientApp final : public BwClientApp {
   virtual void Init() override;
 
   virtual void PushData(const BwMessage& bw_msg, BwAck* bw_ack) override;
+
+  void PushDataZero(const BwMessage& bw_msg, BwAck* bw_ack);
+
  private:
   void* zmq_context_;
   void* zmq_requester_;
@@ -34,6 +37,7 @@ class ZeromqBwServerApp final : public BwServerApp {
   virtual void Init() override;
 
   virtual int Run() override;
+  int Run2();
 
  private:
   void* zmq_context_;
