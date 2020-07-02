@@ -23,6 +23,7 @@ void SocketBwClientApp::Init() {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 
+  sock_.SetNonBlock(true);
   RPC_LOG(DEBUG) << "connected to: " << ai.AddrStr();
   send_buffer_.resize(kDefaultBufferSize);
   recv_buffer_.resize(kDefaultBufferSize);
@@ -35,26 +36,28 @@ void SocketBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   size_t header_size = pb_header.ByteSizeLong();
   size_t data_size = bw_msg.data.size();
   RPC_LOG(TRACE) << "header_size: " << header_size << ", data_size: " << data_size;
+
   // write meta header
   size_t meta_size = 2 * sizeof(uint32_t);
   *reinterpret_cast<uint32_t*>(send_buffer_.data()) = header_size;
   *reinterpret_cast<uint32_t*>(send_buffer_.data() + sizeof(uint32_t)) = data_size;
+
   // write message header
   pb_header.SerializeToArray(send_buffer_.data() + meta_size, header_size);
   RPC_CHECK_EQ(header_size + meta_size,
                sock_.SendAll(send_buffer_.data(), header_size + meta_size, 0));
-  // write message data
 
+  // write message data
+  RPC_CHECK_EQ(data_size, sock_.SendAll(bw_msg.data.data(), data_size, 0));
   // whether to do copy here only affect the cpu utilization, it has negligible
   // influence in bandwidth throughput
-  RPC_CHECK_EQ(data_size, sock_.SendAll(bw_msg.data.data(), data_size, 0));
   // memcpy(send_buffer_.data(), bw_msg.data.data(), data_size);
   // RPC_CHECK_EQ(data_size, sock_.SendAll(send_buffer_.data(), data_size, 0));
 
   // receive and de-serialize
   size_t r = sock_.RecvAll(recv_buffer_.data(), header_size, 0);
   if (r < header_size) {
-    RPC_LOG(ERROR) << "only " << r << " ( expected " << header_size
+    RPC_LOG(ERROR) << "only " << r << " (expected " << header_size
                    << ") bytes received, peer has performed an orderly shutdown";
     bw_ack->success = false;
   } else {
@@ -91,10 +94,11 @@ int SocketBwServerApp::Run() {
   int max_events = prism::GetEnvOrDefault<int>("EPOLL_MAX_EVENTS", 1024);
   // never resize this vector
   std::vector<Event> events(max_events);
+  auto timeout = std::chrono::milliseconds(timeout_ms);
 
   while (1) {
     // Epoll IO
-    int nevents = poll_.PollOnce(&events[0], max_events, std::chrono::milliseconds(timeout_ms));
+    int nevents = poll_.PollOnce(&events[0], max_events, timeout);
     PCHECK(nevents >= 0) << "PollOnce";
 
     for (int i = 0; i < nevents; i++) {
