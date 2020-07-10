@@ -12,17 +12,18 @@ GRPC_CPP_PLUGIN_PATH := `which $(GRPC_CPP_PLUGIN)`
 INCPATH += -I./src -I$(DEPS_PATH)/include
 CFLAGS += -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLAGS)
 
-PROTOBUF_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
+PROTOBUF_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf`
 GRPC_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
 BRPC_LIBS := -lbrpc -lgflags -lleveldb ${PROTOBUF_LIBS}
 ZEROMQ_LIBS := -lzmq
 
 LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
-		$(GRPC_LIBS) \
+		-Wl,--no-as-needed \
+		$(GRPC_LIBS) -lgrpc++_reflection \
 		$(BRPC_LIBS) \
 		$(ZEROMQ_LIBS) \
 		-lpthread \
-		-Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
+		-Wl,--as-needed \
 		-ldl
 
 DEBUG := 1
