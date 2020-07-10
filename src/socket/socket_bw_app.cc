@@ -98,8 +98,8 @@ int SocketBwServerApp::Run() {
 
   while (1) {
     // Epoll IO
-    int nevents = poll_.PollOnce(&events[0], max_events, timeout);
-    PCHECK(nevents >= 0) << "PollOnce";
+    int nevents = poll_.PollUntil(&events[0], max_events, timeout);
+    PCHECK(nevents >= 0) << "PollUntil";
 
     for (int i = 0; i < nevents; i++) {
       auto& ev = events[i];
@@ -114,7 +114,11 @@ int SocketBwServerApp::Run() {
           reinterpret_cast<BwServerEndpoint*>(static_cast<uintptr_t>(ev.token()));
 
       if (ev.IsReadable()) {
+        // static auto t1 = std::chrono::high_resolution_clock::now();
         endpoint->OnRecvReady();
+        // auto t2 = std::chrono::high_resolution_clock::now();
+        // RPC_LOG(DEBUG) << (t2 - t1).count() / 1e3 << " us";
+        // t1 = t2;
       }
 
       if (ev.IsWritable()) {
