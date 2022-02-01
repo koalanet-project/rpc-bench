@@ -3,6 +3,8 @@ deps/
 compile_commands.json
 Session.vim
 .clangd/
+.cache/
 .vscode/
 *.pb.h
 *.pb.cc
+*.svg

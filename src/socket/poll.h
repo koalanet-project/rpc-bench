@@ -1,7 +1,7 @@
 #ifndef RPC_BENCH_SOCKET_POLL_H_
 #define RPC_BENCH_SOCKET_POLL_H_
-#include <bits/stdint-uintn.h>
 #include <sys/epoll.h>
+#include <chrono>
 #include <optional>
 
 #include "socket/socket.h"
@@ -35,6 +35,9 @@ class Interest {
   }
   inline Interest Add(const Interest other) const {
     return Interest(inner_ | other.inner_);
+  }
+  inline Interest Remove(const Interest other) const {
+    return Interest(inner_ & ~other.inner_);
   }
   inline Interest operator|(const Interest other) const {
     return this->Add(other);
@@ -128,11 +131,10 @@ class Selector {
     PCHECK(epoll_ctl(epollfd_, op, fd, epev) == 0);
   }
   inline int Select(Event* events, int maxevents,
-                    std::optional<std::chrono::microseconds> timeout_ms) {
+                    std::optional<std::chrono::milliseconds> timeout_ms) {
     int timeout = timeout_ms.has_value() ? timeout_ms.value().count() : -1;
     struct epoll_event* epev = reinterpret_cast<struct epoll_event*>(events);
     return epoll_wait(epollfd_, epev, maxevents, timeout);
-    // int epoll_wait(struct epoll_event* epev, int maxevents, int timeout_ms)
   }
   inline void Register(RawFd fd, Token token, Interest interests) {
     struct epoll_event event = (struct epoll_event) {
@@ -342,7 +344,7 @@ class Poll {
     return registry_;
   }
   inline int PollUntil(Event* events, int maxevents,
-                       std::optional<std::chrono::microseconds> timeout_ms) {
+                       std::optional<std::chrono::milliseconds> timeout_ms) {
     return registry_.selector_.Select(events, maxevents, timeout_ms);
   }
 
