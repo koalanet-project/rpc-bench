@@ -149,6 +149,7 @@ bool BwServerEndpoint::Reply() {
   DLOG(TRACE) << "Reply";
   tx_queue_.push(std::move(reply_buffer_));
   state_ = State::REPLYING;
+  OnSendReady();
   return true;
 }
 
@@ -159,12 +160,22 @@ void BwServerEndpoint::OnSendReady() {
     ssize_t nbytes = sock_.Send(buffer->GetRemainBuffer(), buffer->GetRemainSize());
     if (nbytes == -1) {
       PCHECK(sock_.LastErrorWouldBlock());
+      if (!interest_.IsWritable()) {
+        interest_ |= Interest::WRITABLE;
+        app_->poll().registry().Reregister(sock_, Token(reinterpret_cast<uintptr_t>(this)),
+                                           interest_);
+      }
       break;
     }
     buffer->MarkHandled(nbytes);
     if (buffer->IsClear()) {
       state_ = State::NEW_RPC;  // RPC completed
       tx_queue_.pop();
+      if (interest_.IsWritable()) {
+        interest_ = Interest::READABLE;
+        app_->poll().registry().Reregister(sock_, Token(reinterpret_cast<uintptr_t>(this)),
+                                           interest_);
+      }
       // std::mem::drop(buffer), be aware that the buffer reference is
       // out-dated
     }
