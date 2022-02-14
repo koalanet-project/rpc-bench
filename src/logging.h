@@ -1,3 +1,6 @@
+#ifndef RPC_BENCH_LOG_H_
+#define RPC_BENCH_LOG_H_
+
 #include <prism/logging.h>
 
 #define RPC_LOG(severity) \
@@ -18,3 +21,5 @@
 
 
 #define RPC_UNIMPLEMENTED RPC_LOG(FATAL) << "unimplemented\n";
+
+#endif

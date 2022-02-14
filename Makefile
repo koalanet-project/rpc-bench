@@ -12,8 +12,8 @@ GRPC_CPP_PLUGIN_PATH := `which $(GRPC_CPP_PLUGIN)`
 INCPATH += -I./src -I$(DEPS_PATH)/include
 CFLAGS += -std=c++17 -msse2 -ggdb -Wall -finline-functions $(INCPATH) $(ADD_CFLAGS)
 
-PROTOBUF_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf`
-GRPC_LIBS := `pkg-config --with-path=${DEPS_PATH}/lib/pkgconfig/ --libs protobuf grpc++`
+PROTOBUF_LIBS := `PKG_CONFIG_PATH=${DEPS_PATH}/lib/pkgconfig/ pkg-config --libs protobuf`
+GRPC_LIBS := `PKG_CONFIG_PATH=${DEPS_PATH}/lib/pkgconfig/ pkg-config --libs protobuf grpc++`
 BRPC_LIBS := -lbrpc -lgflags -lleveldb ${PROTOBUF_LIBS}
 ZEROMQ_LIBS := -lzmq
 
@@ -39,7 +39,7 @@ endif
 
 PROTO_PATH = src/protos
 #PROTOS = $(shell find $(PROTO_PATH) -type f -name "*.proto")
-PROTOS = $(addprefix $(PROTO_PATH)/,bw_app.proto)
+PROTOS = $(addprefix $(PROTO_PATH)/,bw_app.proto lat_app.proto)
 GEN_SRCS = $(PROTOS:.proto=.pb.cc) $(PROTOS:.proto=.grpc.pb.cc) $(addprefix $(PROTO_PATH)/,bw_app_brpc.pb.cc)
 GEN_HEADERS = $(PROTOS:.proto=.pb.h) $(PROTOS:.proto=.grpc.pb.h) $(addprefix $(PROTO_PATH)/,bw_app_brpc.pb.h)
 
@@ -47,7 +47,6 @@ SRCS = $(shell find src -type f -name "*.cc") $(GEN_SRCS)
 OBJS = $(patsubst src/%,build/%,$(SRCS:.cc=.o))
 
 all: rpc-bench
-
 include make/deps.mk
 
 clean:
@@ -60,7 +59,7 @@ lint:
 rpc-bench: build/rpc-bench
 
 build/rpc-bench: $(OBJS)
-	$(CXX) $(CFLAGS) $(LIBS) $^ -o $@
+	$(CXX) $^ $(CFLAGS) $(LIBS) -o $@
 
 $(PROTO_PATH)/%.pb.cc $(PROTO_PATH)/%.pb.h: $(PROTO_PATH)/%.proto $(GRPC)
 	LD_LIBRARY_PATH=$(DEPS_PATH)/lib $(PROTOC) -I $(PROTO_PATH) --cpp_out=$(PROTO_PATH) $<
