@@ -1,11 +1,13 @@
 #include "app.h"
+
+#include "brpc/brpc_bw_app.h"
 #include "bw_app.h"
 #include "command_opts.h"
 #include "grpc/grpc_bw_app.h"
-#include "socket/socket_bw_app.h"
-#include "brpc/brpc_bw_app.h"
-#include "zeromq/zeromq_bw_app.h"
+#include "grpc/grpc_lat_app.h"
 #include "logging.h"
+#include "socket/socket_bw_app.h"
+#include "zeromq/zeromq_bw_app.h"
 
 namespace rpc_bench {
 
@@ -26,8 +28,22 @@ App* App::Create(CommandOpts opts) {
       return opts.is_server.value() ? static_cast<App*>(new zeromq::ZeromqBwServerApp(opts))
                                     : static_cast<App*>(new zeromq::ZeromqBwClientApp(opts));
     }
-  } else {
-    RPC_UNIMPLEMENTED
+  } else if (opts.app.value() == "latency") {
+    if (opts.rpc.value() == "grpc") {
+      //   return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcLatServerApp(opts))
+      //                                 : static_cast<App*>(new grpc::GrpcLatClientApp(opts));
+      return static_cast<App*>(new grpc::GrpcLatClientApp(opts));
+    } else {
+      RPC_UNIMPLEMENTED
+    }
+  } else if (opts.app.value() == "throughput") {
+      RPC_UNIMPLEMENTED
+    // if (opts.rpc.value() == "grpc") {
+    //   return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcTputServerApp(opts))
+    //                                 : static_cast<App*>(new grpc::GrpcTputClientApp(opts));
+    // } else {
+    //   RPC_UNIMPLEMENTED
+    // }
   }
 }
 
