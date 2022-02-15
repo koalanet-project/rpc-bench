@@ -46,37 +46,31 @@ int GrpcTputClientApp::Run() {
       continue;
     }
 
-    switch (call->call_status) {
-      case AsyncClientCall::WRITE:
-        call->stream->Write(data, (void*)call);
-        tx_cnt++;
-        call->count++;
-        call->call_status = AsyncClientCall::READ;
-        break;
-      case AsyncClientCall::READ:
-        call->stream->Read(&call->ack, (void*)call);
-        rx_cnt++;
-        if ((call_per_req_ > 0 && call->count >= call_per_req_) || time_out)
-          call->call_status = AsyncClientCall::WRITEDONE;
-        else
-          call->call_status = AsyncClientCall::WRITE;
-        break;
-      case AsyncClientCall::WRITEDONE:
-        call->stream->WritesDone((void*)call);
-        call->call_status = AsyncClientCall::FINISH;
-        break;
-      case AsyncClientCall::FINISH:
-        call->stream->Finish(&call->status, (void*)call);
-        call->call_status = AsyncClientCall::CLOSED;
-        break;
-      case AsyncClientCall::CLOSED:
-        delete call;
-        req_cnt--;
-        if (GPR_LIKELY(!time_out)) {
-          new AsyncClientCall(stub_, &cq_);
-          req_cnt++;
-        }
-        break;
+    if (call->call_status == AsyncClientCall::WRITE) {
+      call->stream->Write(data, (void*)call);
+      tx_cnt++;
+      call->count++;
+      call->call_status = AsyncClientCall::READ;
+    } else if (call->call_status == AsyncClientCall::READ) {
+      call->stream->Read(&call->ack, (void*)call);
+      rx_cnt++;
+      if ((call_per_req_ > 0 && call->count >= call_per_req_) || time_out)
+        call->call_status = AsyncClientCall::WRITEDONE;
+      else
+        call->call_status = AsyncClientCall::WRITE;
+    } else if (call->call_status == AsyncClientCall::WRITEDONE) {
+      call->stream->WritesDone((void*)call);
+      call->call_status = AsyncClientCall::FINISH;
+    } else if (call->call_status == AsyncClientCall::FINISH) {
+      call->stream->Finish(&call->status, (void*)call);
+      call->call_status = AsyncClientCall::CLOSED;
+    } else {
+      delete call;
+      req_cnt--;
+      if (GPR_LIKELY(!time_out)) {
+        new AsyncClientCall(stub_, &cq_);
+        req_cnt++;
+      }
     }
 
     time_cnt += 1;
