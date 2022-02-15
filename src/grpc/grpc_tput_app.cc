@@ -28,7 +28,7 @@ int GrpcTputClientApp::Run() {
 
   long rx_cnt = 0, tx_cnt = 0, overlimit = 0;
   bool time_out = false;
-  int time_period = 1000, time_cnt = 0;
+  int time_period = 10000, time_cnt = 0;
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
   auto start = std::chrono::high_resolution_clock::now();
 
