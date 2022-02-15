@@ -30,9 +30,8 @@ App* App::Create(CommandOpts opts) {
     }
   } else if (opts.app.value() == "latency") {
     if (opts.rpc.value() == "grpc") {
-      //   return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcLatServerApp(opts))
-      //                                 : static_cast<App*>(new grpc::GrpcLatClientApp(opts));
-      return static_cast<App*>(new grpc::GrpcLatClientApp(opts));
+      return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcLatServerApp(opts))
+                                    : static_cast<App*>(new grpc::GrpcLatClientApp(opts));
     } else {
       RPC_UNIMPLEMENTED
     }

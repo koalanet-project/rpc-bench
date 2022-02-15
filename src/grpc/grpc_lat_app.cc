@@ -12,12 +12,14 @@ void GrpcLatClientApp::Init() {
 }
 
 int GrpcLatClientApp::Run() {
-  AsyncClientCall* call = new AsyncClientCall(stub_, &cq_);
+  Init();
+
   void* tag;
   bool ok = false;
+  Data data;
+  data.set_data(std::string(opts_.data_size, 'a'));
 
-  long tx_cnt = 0, rx_cnt = 0;
-  std::string payload = std::string(opts_.data_size, 'a');
+  AsyncClientCall* call = new AsyncClientCall(stub_, &cq_);
 
   std::vector<double> latencies;
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
@@ -31,25 +33,22 @@ int GrpcLatClientApp::Run() {
     if (call->finished) break;
     if (call->sendfinished) {
       call->stream->Finish(&call->status, (void*)call);
+      call->finished = true;
       continue;
     }
 
     if (call->writing == true) {
-      Data d;
-      d.set_data(payload);
       call->writing = false;
-      call->stream->Write(d, (void*)call);
-      tx_cnt++;
+      call->stream->Write(data, (void*)call);
       continue;
     } else {
       call->writing = true;
       call->stream->Read(&call->ack, (void*)call);
-      rx_cnt++;
     }
 
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = now - last;
-    latencies.push_back(diff.count());
+    latencies.push_back(1e6 * diff.count());
     if (now - start > time_dura) {
       call->stream->WritesDone((void*)call);
       call->sendfinished = true;
@@ -61,7 +60,7 @@ int GrpcLatClientApp::Run() {
     std::sort(latencies.begin(), latencies.end());
     size_t len = latencies.size();
     printf(
-        "%zu,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f "
+        "%zu\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t "
         "[%zu samples]\n",
         opts_.data_size, latencies[(int)(0.5 * len)], latencies[(int)(0.05 * len)],
         latencies[(int)(0.99 * len)], latencies[(int)(0.999 * len)], latencies[(int)(0.9999 * len)],
@@ -115,14 +114,14 @@ void GrpcLatServerApp::AsyncServerCall::Proceed(bool ok) {
 void GrpcLatServerApp::Init() {}
 
 int GrpcLatServerApp::Run() {
-  std::string bind_address = opts_.host.value() + ":" + std::to_string(opts_.port);
+  std::string bind_address = "0.0.0.0:" + std::to_string(opts_.port);
   ServerBuilder builder;
   builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
 
   builder.RegisterService(&service_);
   cq_ = builder.AddCompletionQueue();
   server_ = builder.BuildAndStart();
-  printf("Async server listening on %s:%d\n", opts_.host.value().c_str(), opts_.port);
+  printf("Async server listening on %s\n", bind_address.c_str());
 
   new AsyncServerCall(&service_, cq_.get(), opts_.data_size);
   void* tag;
