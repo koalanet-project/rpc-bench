@@ -37,7 +37,7 @@ App* App::Create(CommandOpts opts) {
       RPC_UNIMPLEMENTED
     }
   } else if (opts.app.value() == "throughput") {
-      RPC_UNIMPLEMENTED
+    RPC_UNIMPLEMENTED
     // if (opts.rpc.value() == "grpc") {
     //   return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcTputServerApp(opts))
     //                                 : static_cast<App*>(new grpc::GrpcTputClientApp(opts));
@@ -45,6 +45,7 @@ App* App::Create(CommandOpts opts) {
     //   RPC_UNIMPLEMENTED
     // }
   }
+  return NULL;
 }
 
 }  // namespace rpc_bench

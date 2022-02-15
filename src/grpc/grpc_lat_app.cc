@@ -1,12 +1,13 @@
 #include "grpc/grpc_lat_app.h"
+
 #include "logging.h"
 
-namespace rpc_bench{
-namespace grpc{
+namespace rpc_bench {
+namespace grpc {
 
 void GrpcLatClientApp::Init() {
-  auto channel = ::grpc::CreateChannel(opts_.host.value() + std::to_string(opts_.port),
-                                           ::grpc::InsecureChannelCredentials());
+  std::string bind_address = opts_.host.value() + ":" + std::to_string(opts_.port);
+  auto channel = ::grpc::CreateChannel(bind_address, ::grpc::InsecureChannelCredentials());
   stub_ = LatService::NewStub(channel);
 }
 
@@ -72,5 +73,66 @@ int GrpcLatClientApp::Run() {
   return 0;
 }
 
+void GrpcLatServerApp::AsyncServerCall::Proceed(bool ok) {
+  switch (status_) {
+    case CREATE:
+      status_ = PROCESS;
+      service_->RequestSendDataStreamFullDuplex(&ctx_, &stream_, cq_, cq_, this);
+      break;
+
+    case PROCESS:
+      new AsyncServerCall(service_, cq_, data_size_);
+      status_ = READ_COMPLETE;
+      stream_.Read(&data_, this);
+      break;
+
+    case READ_COMPLETE:
+      if (ok) {
+        status_ = WRITE_COMPLETE;
+        stream_.Write(ack_, this);
+      } else {
+        status_ = FINISH;
+        stream_.Finish(Status::OK, this);
+      }
+      break;
+
+    case WRITE_COMPLETE:
+      if (ok) {
+        status_ = READ_COMPLETE;
+        stream_.Read(&data_, this);
+      } else {
+        status_ = FINISH;
+        stream_.Finish(Status::OK, this);
+      }
+      break;
+
+    case FINISH:
+      delete this;
+      break;
+  }
 }
+
+void GrpcLatServerApp::Init() {}
+
+int GrpcLatServerApp::Run() {
+  std::string bind_address = opts_.host.value() + ":" + std::to_string(opts_.port);
+  ServerBuilder builder;
+  builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
+
+  builder.RegisterService(&service_);
+  cq_ = builder.AddCompletionQueue();
+  server_ = builder.BuildAndStart();
+  printf("Async server listening on %s:%d\n", opts_.host.value().c_str(), opts_.port);
+
+  new AsyncServerCall(&service_, cq_.get(), opts_.data_size);
+  void* tag;
+  bool ok;
+  std::string a;
+  while (true) {
+    GPR_ASSERT(cq_->Next(&tag, &ok));
+    static_cast<AsyncServerCall*>(tag)->Proceed(ok);
+  }
 }
+
+}  // namespace grpc
+}  // namespace rpc_bench
