@@ -8,7 +8,7 @@ namespace grpc {
 void GrpcLatClientApp::Init() {
   std::string bind_address = opts_.host.value() + ":" + std::to_string(opts_.port);
   auto channel = ::grpc::CreateChannel(bind_address, ::grpc::InsecureChannelCredentials());
-  stub_ = LatService::NewStub(channel);
+  stub_ = LatTputService::NewStub(channel);
 }
 
 int GrpcLatClientApp::Run() {

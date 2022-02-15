@@ -5,8 +5,8 @@
 
 #include "command_opts.h"
 #include "lat_app.h"
-#include "protos/lat_app.grpc.pb.h"
-#include "protos/lat_app.pb.h"
+#include "protos/lat_tput_app.grpc.pb.h"
+#include "protos/lat_tput_app.pb.h"
 
 namespace rpc_bench {
 namespace grpc {
@@ -21,9 +21,9 @@ using ::grpc::ServerCompletionQueue;
 using ::grpc::ServerContext;
 using ::grpc::Status;
 
-using ::rpc_bench::lat_app::Ack;
-using ::rpc_bench::lat_app::Data;
-using ::rpc_bench::lat_app::LatService;
+using ::rpc_bench::lat_tput_app::Ack;
+using ::rpc_bench::lat_tput_app::Data;
+using ::rpc_bench::lat_tput_app::LatTputService;
 
 class GrpcLatClientApp final : public LatClientApp {
  public:
@@ -43,7 +43,7 @@ class GrpcLatClientApp final : public LatClientApp {
     bool finished;
     bool writing;
 
-    AsyncClientCall(const std::unique_ptr<LatService::Stub>& stub_, CompletionQueue* cq_) {
+    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_) {
       this->stream = stub_->PrepareAsyncSendDataStreamFullDuplex(&this->context, cq_);
       this->stream->StartCall((void*)this);
       this->sendfinished = false;
@@ -52,7 +52,7 @@ class GrpcLatClientApp final : public LatClientApp {
     }
   };
 
-  std::unique_ptr<LatService::Stub> stub_;
+  std::unique_ptr<LatTputService::Stub> stub_;
   CompletionQueue cq_;
 };
 
@@ -71,11 +71,11 @@ class GrpcLatServerApp final : public LatServerApp {
 
  private:
   std::unique_ptr<ServerCompletionQueue> cq_;
-  LatService::AsyncService service_;
+  LatTputService::AsyncService service_;
   std::unique_ptr<Server> server_;
 
   class AsyncServerCall {
-    LatService::AsyncService* service_;
+    LatTputService::AsyncService* service_;
     ServerCompletionQueue* cq_;
     ServerContext ctx_;
     ServerAsyncReaderWriter<Ack, Data> stream_;
@@ -88,7 +88,7 @@ class GrpcLatServerApp final : public LatServerApp {
     size_t data_size_;
 
    public:
-    AsyncServerCall(LatService::AsyncService* service, ServerCompletionQueue* cq, size_t data_size)
+    AsyncServerCall(LatTputService::AsyncService* service, ServerCompletionQueue* cq, size_t data_size)
         : service_(service), cq_(cq), stream_(&ctx_), status_(CREATE), data_size_(data_size) {
       ack_.set_data(std::string(data_size_, 'b'));
       Proceed(true);

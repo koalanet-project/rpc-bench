@@ -5,6 +5,7 @@
 #include "command_opts.h"
 #include "grpc/grpc_bw_app.h"
 #include "grpc/grpc_lat_app.h"
+#include "grpc/grpc_tput_app.h"
 #include "logging.h"
 #include "socket/socket_bw_app.h"
 #include "zeromq/zeromq_bw_app.h"
@@ -36,13 +37,12 @@ App* App::Create(CommandOpts opts) {
       RPC_UNIMPLEMENTED
     }
   } else if (opts.app.value() == "throughput") {
-    RPC_UNIMPLEMENTED
-    // if (opts.rpc.value() == "grpc") {
-    //   return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcTputServerApp(opts))
-    //                                 : static_cast<App*>(new grpc::GrpcTputClientApp(opts));
-    // } else {
-    //   RPC_UNIMPLEMENTED
-    // }
+    if (opts.rpc.value() == "grpc") {
+      return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcTputServerApp(opts))
+                                    : static_cast<App*>(new grpc::GrpcTputClientApp(opts));
+    } else {
+      RPC_UNIMPLEMENTED
+    }
   }
   return NULL;
 }
