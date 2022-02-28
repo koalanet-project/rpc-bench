@@ -128,13 +128,12 @@ void CpuMonitor(const CommandOpts& opts) {
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     cpu_stats.Snapshot();
-    printf("CPU utilization: %.2lf%\n", cpu_stats.CpuUtil() * 100);
+    printf("CPU utilization: %.2lf%%\n", cpu_stats.CpuUtil() * 100);
+    RPC_LOG(DEBUG) << cpu_stats.DebugString();
 
     auto end = std::chrono::high_resolution_clock::now();
     if (end - start > monitor_ms) break;
   }
-
-  RPC_LOG(DEBUG) << cpu_stats.DebugString();
 
   //   RPC_LOG(INFO) << prism::FormatString(
   //       "Average Idle in %.2f seconds is %.2f, CPU utilization is %.2f",
