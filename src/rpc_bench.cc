@@ -47,7 +47,7 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
     kMonitorTimeTag,
   };
   int err = 0;
-  static struct option long_options[] = { // clang-format off
+  static struct option long_options[] = {// clang-format off
       {"help", no_argument, 0, 'h'},
       {"port", required_argument, 0, 'p'},
       {"app", required_argument, 0, 'a'},
@@ -123,18 +123,23 @@ void CpuMonitor(const CommandOpts& opts) {
   std::this_thread::sleep_for(std::chrono::milliseconds(warmup_ms));
   cpu_stats.Snapshot();
 
-  size_t monitor_ms = opts.monitor_time_sec.value() * 1000;
-  std::this_thread::sleep_for(std::chrono::milliseconds(monitor_ms));
-  cpu_stats.Snapshot();
+  auto monitor_ms = std::chrono::milliseconds((int64_t)opts.monitor_time_sec.value() * 1000);
+  auto start = std::chrono::high_resolution_clock::now();
+  while (true) {
+    std::this_thread::sleep_for(monitor_ms);
+    cpu_stats.Snapshot();
+    RPC_LOG(INFO) << "CPU utilization: " << cpu_stats.CpuUtil();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    if (end - start > monitor_ms) break;
+  }
 
   RPC_LOG(DEBUG) << cpu_stats.DebugString();
 
-  double idleavg = cpu_stats.AverageIdle() * 100;
-  RPC_LOG(INFO) << prism::FormatString(
-      "Average Idle in %.2f seconds is %.2f, CPU utilization is %.2f",
-      opts.monitor_time_sec.value(), idleavg, 100 - idleavg);
+  //   RPC_LOG(INFO) << prism::FormatString(
+  //       "Average Idle in %.2f seconds is %.2f, CPU utilization is %.2f",
+  //       opts.monitor_time_sec.value(), idleavg, 100 - idleavg);
 }
-
 
 int main(int argc, char* argv[]) {
   struct CommandOpts opts;
