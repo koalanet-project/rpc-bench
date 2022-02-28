@@ -25,6 +25,6 @@ Client specific:
 ## Build
 Simply
 ```
-make -j 4
+make -j 4 DEBUG=0
 ```
 It will downloads the dependencies and build them automatically.

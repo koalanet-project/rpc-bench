@@ -5,8 +5,8 @@
 
 #include "bw_app.h"
 #include "command_opts.h"
-#include "prism/utils.h"
 #include "logging.h"
+#include "prism/utils.h"
 #include "protos/bw_app.pb.h"
 
 namespace rpc_bench {
@@ -33,7 +33,7 @@ void ZeromqBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
   return PushDataZero(bw_msg, bw_ack);
 }
 
-void ZeromqBwClientApp::PushDataNaive(const BwMessage &bw_msg, BwAck *bw_ack) {
+void ZeromqBwClientApp::PushDataNaive(const BwMessage& bw_msg, BwAck* bw_ack) {
   bw_app::PbBwHeader pb_header;
   size_t header_size = pb_header.ByteSizeLong();
   size_t data_size = bw_msg.data.size();
@@ -60,7 +60,7 @@ void ZeromqBwClientApp::PushDataZero(const BwMessage& bw_msg, BwAck* bw_ack) {
   zmq_msg_t header_msg;
   zmq_msg_init_data(&header_msg, header_buf, header_size, FreeData, nullptr);
   while (true) {
-    if (zmq_msg_send(&header_msg, zmq_requester_, tag) == header_size) break;
+    if (zmq_msg_send(&header_msg, zmq_requester_, tag) == (int)header_size) break;
     RPC_LOG_IF(ERROR, errno != EINTR) << zmq_strerror(errno);
   }
   zmq_msg_close(&header_msg);
@@ -71,7 +71,7 @@ void ZeromqBwClientApp::PushDataZero(const BwMessage& bw_msg, BwAck* bw_ack) {
                     nullptr);
   tag = ZMQ_DONTWAIT;
   while (true) {
-    if (zmq_msg_send(&data_msg, zmq_requester_, tag) == data_size) break;
+    if (zmq_msg_send(&data_msg, zmq_requester_, tag) == (int)data_size) break;
     RPC_LOG_IF(ERROR, errno != EINTR)
         << "failed to send message, errno: " << errno << " " << zmq_strerror(errno);
   }
@@ -126,7 +126,7 @@ int ZeromqBwServerApp::RunZero() {
     // send some dummy reply, use the received data
     zmq_msg_init_data(&reply_zmsg, zmq_msg_data(&zmsg), header_size, FreeData, nullptr);
     while (true) {
-      if (zmq_msg_send(&reply_zmsg, zmq_responder_, ZMQ_DONTWAIT) == header_size) break;
+      if (zmq_msg_send(&reply_zmsg, zmq_responder_, ZMQ_DONTWAIT) == (int)header_size) break;
       RPC_LOG_IF(ERROR, errno != EINTR) << zmq_strerror(errno);
     }
     zmq_msg_close(&reply_zmsg);

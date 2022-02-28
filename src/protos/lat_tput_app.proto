@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package rpc_bench.lat_tput_app;
+
+service LatTputService {
+  rpc SendDataStreamFullDuplex(stream Data) returns (stream Ack) {}
+}
+
+message Data {
+  bytes data = 1;
+}
+
+message Ack {
+  bytes data = 1;
+}
