@@ -126,9 +126,9 @@ void CpuMonitor(const CommandOpts& opts) {
   auto monitor_ms = std::chrono::milliseconds((int64_t)opts.monitor_time_sec.value() * 1000);
   auto start = std::chrono::high_resolution_clock::now();
   while (true) {
-    std::this_thread::sleep_for(monitor_ms);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     cpu_stats.Snapshot();
-    RPC_LOG(INFO) << "CPU utilization: " << cpu_stats.CpuUtil();
+    printf("CPU utilization: %.2lf%\n", cpu_stats.CpuUtil() * 100);
 
     auto end = std::chrono::high_resolution_clock::now();
     if (end - start > monitor_ms) break;
@@ -154,7 +154,6 @@ int main(int argc, char* argv[]) {
   if (opts.monitor_time_sec.has_value()) {
     std::thread(CpuMonitor, opts).detach();
   }
-
   /// create and run app
   auto app = std::unique_ptr<App>(App::Create(opts));  // copy opts
   return app->Run();

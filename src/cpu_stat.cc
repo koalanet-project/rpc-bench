@@ -1,6 +1,7 @@
 #include "cpu_stat.h"
 
 #include <sstream>
+#include <thread>
 
 #include "logging.h"
 
@@ -20,14 +21,16 @@ void CpuSnapshot::Snapshot() {
   // open it every time to get new statistics
 
   FILE* fp = fopen(PROC_STAT_PATH, "r");
-  fscanf(fp, " cpu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu", &user, &nice, &sys, &idle, &iowait,
-         &hardirq, &softirq, &steal, &guest, &guest_nice);
+  int nread = fscanf(fp, " cpu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu", &user, &nice, &sys, &idle,
+                     &iowait, &hardirq, &softirq, &steal, &guest, &guest_nice);
+  CHECK(nread == 10);
   fclose(fp);
 
   fp = fopen(PROC_SELF_STAT_PATH, "r");
-  fscanf(fp, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld", &pid, comm, &state,
-         &ppid, &pgrp, &session, &tty_nr, &tpgid, &flag, &minflt, &cminflt, &majflt, &cmajflt,
-         &utime, &stime, &cutime, &cstime);
+  nread = fscanf(fp, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld", &pid, comm,
+                 &state, &ppid, &pgrp, &session, &tty_nr, &tpgid, &flag, &minflt, &cminflt, &majflt,
+                 &cmajflt, &utime, &stime, &cutime, &cstime);
+  CHECK(nread == 17);
   fclose(fp);
 }
 
@@ -86,5 +89,7 @@ double CpuStats::CpuUtil() const {
   uint64_t s = curr_.stime - prev_.stime;
   uint64_t t = curr_.Total() - prev_.Total();
 
-  return 1.0 * (u + s) / t;
+  const unsigned core_cnt = std::thread::hardware_concurrency();
+
+  return 1.0 * (u + s) / t * core_cnt;
 }
