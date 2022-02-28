@@ -38,7 +38,7 @@ std::string CpuSnapshot::DebugString() {
   std::stringstream ss;
   char s[512];
   sprintf(s,
-          "({ pid: %d, comm: %s, state: %c, ppid: %d, pgrp: %d, session: %d, tty_nr: %d, tpgid: "
+          "{ pid: %d, comm: %s, state: %c, ppid: %d, pgrp: %d, session: %d, tty_nr: %d, tpgid: "
           "%d, flag: %u, minflt: %lu, cminflt: %lu, majflt: %lu, cmajflt: %lu, utime: %lu, stime: "
           "%lu, cutime: %ld, cstime: %ld }\n",
           pid, comm, state, ppid, pgrp, session, tty_nr, tpgid, flag, minflt, cminflt, majflt,
