@@ -126,7 +126,6 @@ int GrpcLatServerApp::Run() {
   new AsyncServerCall(&service_, cq_.get(), opts_.data_size);
   void* tag;
   bool ok;
-  std::string a;
   while (true) {
     GPR_ASSERT(cq_->Next(&tag, &ok));
     static_cast<AsyncServerCall*>(tag)->Proceed(ok);

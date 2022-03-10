@@ -36,7 +36,7 @@ class GrpcTputClientApp final : public TputClientApp {
 
  private:
   struct AsyncClientCall {
-    enum CallStatus { WRITE, READ, WRITEDONE, FINISH, CLOSED };
+    enum CallStatus { CREATE, WRITE, READ, WRITEDONE, FINISH, CLOSED };
 
     Ack ack;
     ClientContext context;
@@ -49,7 +49,7 @@ class GrpcTputClientApp final : public TputClientApp {
       this->stream = stub_->PrepareAsyncSendDataStreamFullDuplex(&this->context, cq_);
       this->stream->StartCall((void*)this);
       this->count = 0;
-      this->call_status = WRITE;
+      this->call_status = CREATE;
     }
   };
 

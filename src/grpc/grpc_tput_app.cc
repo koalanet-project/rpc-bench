@@ -37,40 +37,58 @@ int GrpcTputClientApp::Run() {
     // GPR_ASSERT(ok);
     if (GPR_UNLIKELY(!ok)) {
       overlimit += 1;
-      delete call;
-      req_cnt--;
-      if (GPR_LIKELY(!time_out)) {
-        call = new AsyncClientCall(stub_, &cq_);
-        req_cnt++;
-      }
-      continue;
-    }
-
-    if (call->call_status == AsyncClientCall::WRITE) {
-      call->stream->Write(data, (void*)call);
-      tx_cnt++;
-      call->count++;
-      call->call_status = AsyncClientCall::READ;
-    } else if (call->call_status == AsyncClientCall::READ) {
-      call->stream->Read(&call->ack, (void*)call);
-      rx_cnt++;
-      if ((call_per_req_ > 0 && call->count >= call_per_req_) || time_out)
-        call->call_status = AsyncClientCall::WRITEDONE;
-      else
-        call->call_status = AsyncClientCall::WRITE;
-    } else if (call->call_status == AsyncClientCall::WRITEDONE) {
-      call->stream->WritesDone((void*)call);
-      call->call_status = AsyncClientCall::FINISH;
-    } else if (call->call_status == AsyncClientCall::FINISH) {
-      call->stream->Finish(&call->status, (void*)call);
       call->call_status = AsyncClientCall::CLOSED;
     } else {
-      delete call;
-      req_cnt--;
-      if (GPR_LIKELY(!time_out)) {
-        new AsyncClientCall(stub_, &cq_);
-        req_cnt++;
+      switch (call->call_status) {
+        case AsyncClientCall::CREATE:
+          call->call_status = AsyncClientCall::WRITE;
+          break;
+        case AsyncClientCall::WRITE:
+          tx_cnt++;
+          call->count++;
+          call->call_status = AsyncClientCall::READ;
+          break;
+        case AsyncClientCall::READ:
+          rx_cnt++;
+          if ((call_per_req_ > 0 && call->count >= call_per_req_) || time_out) {
+            call->call_status = AsyncClientCall::WRITEDONE;
+          } else {
+            call->call_status = AsyncClientCall::WRITE;
+          }
+          break;
+        case AsyncClientCall::WRITEDONE:
+          call->call_status = AsyncClientCall::FINISH;
+          break;
+        case AsyncClientCall::FINISH:
+          call->call_status = AsyncClientCall::CLOSED;
+          break;
+        default:
+          break;
       }
+    }
+
+    switch (call->call_status) {
+      case AsyncClientCall::WRITE:
+        call->stream->Write(data, (void*)call);
+        break;
+      case AsyncClientCall::READ:
+        call->stream->Read(&call->ack, (void*)call);
+        break;
+      case AsyncClientCall::WRITEDONE:
+        call->stream->WritesDone((void*)call);
+        break;
+      case AsyncClientCall::FINISH:
+        call->stream->Finish(&call->status, (void*)call);
+        break;
+      case AsyncClientCall::CLOSED:
+        delete call;
+        req_cnt--;
+        if (GPR_LIKELY(!time_out)) {
+          new AsyncClientCall(stub_, &cq_);
+          req_cnt++;
+        }
+      default:
+        break;
     }
 
     time_cnt += 1;
@@ -85,6 +103,7 @@ int GrpcTputClientApp::Run() {
   std::chrono::duration<double> seconds = end - start;
   double duration = seconds.count();
 
+  printf("overlimit: %ld\n", overlimit);
   printf("rx_gbps,\t tx_gbps,\t rx_rps,\t tx_rps\n");
   double rx_gbps = 8.0 * rx_cnt * 4 / duration / 1e9;
   double tx_gbps = 8.0 * tx_cnt * opts_.data_size / duration / 1e9;
