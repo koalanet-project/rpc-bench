@@ -11,11 +11,11 @@
 namespace rpc_bench {
 namespace grpc {
 
-using ::grpc::ClientAsyncReaderWriter;
+using ::grpc::ClientAsyncResponseReader;
 using ::grpc::ClientContext;
 using ::grpc::CompletionQueue;
 using ::grpc::Server;
-using ::grpc::ServerAsyncReaderWriter;
+using ::grpc::ServerAsyncResponseWriter;
 using ::grpc::ServerBuilder;
 using ::grpc::ServerCompletionQueue;
 using ::grpc::ServerContext;
@@ -38,17 +38,13 @@ class GrpcLatClientApp final : public LatClientApp {
     Ack ack;
     ClientContext context;
     Status status;
-    std::unique_ptr<ClientAsyncReaderWriter<Data, Ack>> stream;
-    bool sendfinished;
-    bool finished;
-    bool writing;
+    std::unique_ptr<ClientAsyncResponseReader<Ack>> resp_reader;
 
-    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_) {
-      this->stream = stub_->PrepareAsyncSendDataStreamFullDuplexA(&this->context, cq_);
-      this->stream->StartCall((void*)this);
-      this->sendfinished = false;
-      this->finished = false;
-      this->writing = true;
+    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_,
+                    Data& data) {
+      this->resp_reader = stub_->PrepareAsyncSendData(&this->context, data, cq_);
+      this->resp_reader->StartCall();
+      this->resp_reader->Finish(&this->ack, &this->status, this);
     }
   };
 
@@ -78,26 +74,24 @@ class GrpcLatServerApp final : public LatServerApp {
     LatTputService::AsyncService* service_;
     ServerCompletionQueue* cq_;
     ServerContext ctx_;
-    ServerAsyncReaderWriter<Ack, Data> stream_;
+    ServerAsyncResponseWriter<Ack> responder_;
 
-    enum CallStatus { CREATE, PROCESS, READ_COMPLETE, WRITE_COMPLETE, FINISH };
+    enum CallStatus { CREATE, PROCESS, FINISH };
     CallStatus status_;
 
     Data data_;
     Ack ack_;
     size_t data_size_;
-    int type_;
 
    public:
     AsyncServerCall(LatTputService::AsyncService* service, ServerCompletionQueue* cq,
-                    size_t data_size, int type)
-        : service_(service), cq_(cq), stream_(&ctx_), status_(CREATE), data_size_(data_size) {
-      type_ = type;
-      ack_.set_data(std::string(data_size_, type == 0 ? '0' : '1'));
-      Proceed(true);
+                    size_t data_size)
+        : service_(service), cq_(cq), responder_(&ctx_), status_(CREATE), data_size_(data_size) {
+      ack_.set_data(std::string(data_size_, 'b'));
+      Proceed();
     }
 
-    void Proceed(bool ok);
+    void Proceed();
   };
 };
 

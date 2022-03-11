@@ -14,98 +14,58 @@ void GrpcLatClientApp::Init() {
 int GrpcLatClientApp::Run() {
   Init();
 
-  void* tag;
-  bool ok = false;
   Data data;
   data.set_data(std::string(opts_.data_size, 'a'));
 
-  AsyncClientCall* call = new AsyncClientCall(stub_, &cq_);
-
+  long overlimit = 0;
   std::vector<double> latencies;
+  bool time_out = false;
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
-  auto start = std::chrono::high_resolution_clock::now();
-  auto last = start;
+  auto start = std::chrono::high_resolution_clock::now(), last = start;
 
-  while (cq_.Next(&tag, &ok)) {
-    GPR_ASSERT(ok);
-    call = static_cast<AsyncClientCall*>(tag);
+  while (!time_out) {
+    AsyncClientCall* call = new AsyncClientCall(stub_, &cq_, data);
 
-    if (call->finished) break;
-    if (call->sendfinished) {
-      call->stream->Finish(&call->status, (void*)call);
-      call->finished = true;
-      continue;
-    }
+    void* tag;
+    bool ok = false;
+    GPR_ASSERT(cq_.Next(&tag, &ok));
 
-    if (call->writing == true) {
-      call->writing = false;
-      call->stream->Write(data, (void*)call);
-      continue;
-    } else {
-      call->writing = true;
-      call->stream->Read(&call->ack, (void*)call);
-    }
-
-    auto now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = now - last;
-    latencies.push_back(1e6 * diff.count());
-    if (now - start > time_dura) {
-      call->stream->WritesDone((void*)call);
-      call->sendfinished = true;
-    }
-    last = std::chrono::high_resolution_clock::now();  // latencies.push_back may take some time
+    if (call->status.ok()) {
+      auto now = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> diff = now - last;
+      latencies.push_back(1e6 * diff.count());
+      time_out = (now - start > time_dura);
+      last = std::chrono::high_resolution_clock::now();  // latencies.push_back may take some time
+    } else
+      overlimit++;
   }
 
-  if (call->status.ok()) {
-    std::sort(latencies.begin(), latencies.end());
-    size_t len = latencies.size();
-    printf(
-        "%zu\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t %.1f\t "
-        "[%zu samples]\n",
-        opts_.data_size, latencies[(int)(0.5 * len)], latencies[(int)(0.05 * len)],
-        latencies[(int)(0.99 * len)], latencies[(int)(0.999 * len)], latencies[(int)(0.9999 * len)],
-        latencies[(int)(0.99999 * len)], latencies[(int)(0.999999 * len)], latencies[len - 1], len);
-  } else {
-    RPC_LOG(ERROR) << call->status.error_code() << ": " << call->status.error_message();
-  }
+  std::sort(latencies.begin(), latencies.end());
+  double sum = 0;
+  for (double latency : latencies) sum += latency;
+  size_t len = latencies.size();
+  printf("overlimit: %ld\n", overlimit);
+  printf(
+      "%zu\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t "
+      "[%zu samples]\n",
+      opts_.data_size, sum / len, latencies[(int)(0.5 * len)], latencies[(int)(0.05 * len)],
+      latencies[(int)(0.99 * len)], latencies[(int)(0.999 * len)], latencies[(int)(0.9999 * len)],
+      latencies[(int)(0.99999 * len)], latencies[(int)(0.999999 * len)], latencies[len - 1], len);
 
   return 0;
 }
 
-void GrpcLatServerApp::AsyncServerCall::Proceed(bool ok) {
+void GrpcLatServerApp::AsyncServerCall::Proceed() {
   switch (status_) {
-    case CREATE:  // start to listen
+    case CREATE:
       status_ = PROCESS;
-      if (type_ == 0)
-        service_->RequestSendDataStreamFullDuplexA(&ctx_, &stream_, cq_, cq_, this);
-      else
-        service_->RequestSendDataStreamFullDuplexB(&ctx_, &stream_, cq_, cq_, this);
+      service_->RequestSendData(&ctx_, &data_, &responder_, cq_, cq_, this);
       break;
 
     case PROCESS:
-      new AsyncServerCall(service_, cq_, data_size_, type_);  // create a new one to listen
-      status_ = READ_COMPLETE;
-      stream_.Read(&data_, this);
-      break;
-
-    case READ_COMPLETE:
-      if (ok) {
-        status_ = WRITE_COMPLETE;
-        stream_.Write(ack_, this);
-      } else {
-        status_ = FINISH;
-        stream_.Finish(Status::OK, this);
-      }
-      break;
-
-    case WRITE_COMPLETE:
-      if (ok) {
-        status_ = READ_COMPLETE;
-        stream_.Read(&data_, this);
-      } else {
-        status_ = FINISH;
-        stream_.Finish(Status::OK, this);
-      }
+      new AsyncServerCall(service_, cq_, data_size_);
+      status_ = FINISH;
+      responder_.Finish(ack_, Status::OK, this);
       break;
 
     case FINISH:
@@ -126,13 +86,12 @@ int GrpcLatServerApp::Run() {
   server_ = builder.BuildAndStart();
   printf("Async server listening on %s\n", bind_address.c_str());
 
-  new AsyncServerCall(&service_, cq_.get(), opts_.data_size, 0);
-  new AsyncServerCall(&service_, cq_.get(), opts_.data_size, 1);
+  new AsyncServerCall(&service_, cq_.get(), opts_.data_size);
   void* tag;
   bool ok;
   while (true) {
     GPR_ASSERT(cq_->Next(&tag, &ok));
-    static_cast<AsyncServerCall*>(tag)->Proceed(ok);
+    static_cast<AsyncServerCall*>(tag)->Proceed();
   }
 }
 

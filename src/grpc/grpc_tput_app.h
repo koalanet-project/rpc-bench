@@ -12,11 +12,11 @@
 namespace rpc_bench {
 namespace grpc {
 
-using ::grpc::ClientAsyncReaderWriter;
+using ::grpc::ClientAsyncResponseReader;
 using ::grpc::ClientContext;
 using ::grpc::CompletionQueue;
 using ::grpc::Server;
-using ::grpc::ServerAsyncReaderWriter;
+using ::grpc::ServerAsyncResponseWriter;
 using ::grpc::ServerBuilder;
 using ::grpc::ServerCompletionQueue;
 using ::grpc::ServerContext;
@@ -36,30 +36,19 @@ class GrpcTputClientApp final : public TputClientApp {
 
  private:
   struct AsyncClientCall {
-    enum CallStatus { CREATE, WRITE, READ, WRITEDONE, FINISH, CLOSED };
-
     Ack ack;
     ClientContext context;
     Status status;
-    std::unique_ptr<ClientAsyncReaderWriter<Data, Ack>> stream;
-    long count;
-    CallStatus call_status;
-    int type_;
+    std::unique_ptr<ClientAsyncResponseReader<Ack>> resp_reader;
 
     AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_,
-                    int type) {
-      type_ = type;
-      if (type_ == 0)
-        this->stream = stub_->PrepareAsyncSendDataStreamFullDuplexA(&this->context, cq_);
-      else
-        this->stream = stub_->PrepareAsyncSendDataStreamFullDuplexB(&this->context, cq_);
-      this->stream->StartCall((void*)this);
-      this->count = 0;
-      this->call_status = CREATE;
+                    Data& data) {
+      this->resp_reader = stub_->PrepareAsyncSendData(&this->context, data, cq_);
+      this->resp_reader->StartCall();
+      this->resp_reader->Finish(&this->ack, &this->status, this);
     }
   };
 
-  int call_per_req_;
   std::unique_ptr<LatTputService::Stub> stub_;
   CompletionQueue cq_;
 };

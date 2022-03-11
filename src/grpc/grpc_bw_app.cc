@@ -35,7 +35,7 @@ void GrpcBwClientApp::PushData(const BwMessage& bw_msg, BwAck* bw_ack) {
     bw_ack->success = true;
     UnpackPbBwHeader(&bw_ack->header, reply.header());
   } else {
-    RPC_LOG(ERROR) << status.error_code() << ": " << status.error_message();
+    RPC_LOG(DEBUG) << status.error_code() << ": " << status.error_message();
     bw_ack->success = false;
   }
 }
