@@ -1,0 +1,26 @@
+diff --git a/src/core/ext/filters/client_channel/http_connect_handshaker.cc b/src/core/ext/filters/client_channel/http_connect_handshaker.cc
+index 8fbd09fee6..b0a22986bd 100644
+--- a/src/core/ext/filters/client_channel/http_connect_handshaker.cc
++++ b/src/core/ext/filters/client_channel/http_connect_handshaker.cc
+@@ -336,7 +336,7 @@ void HttpConnectHandshaker::DoHandshake(grpc_tcp_server_acceptor* /*acceptor*/,
+   request.ssl_host_override = nullptr;
+   request.http.method = const_cast<char*>("CONNECT");
+   request.http.path = server_name;
+-  request.http.version = GRPC_HTTP_HTTP10;  // Set by OnReadDone
++  request.http.version = GRPC_HTTP_HTTP11;  // Set by OnReadDone
+   request.http.hdrs = headers;
+   request.http.hdr_count = num_headers;
+   request.http.body_length = 0;
+diff --git a/src/core/lib/http/format_request.cc b/src/core/lib/http/format_request.cc
+index 1f0a5cf5e2..5821b00451 100644
+--- a/src/core/lib/http/format_request.cc
++++ b/src/core/lib/http/format_request.cc
+@@ -39,7 +39,7 @@ static void fill_common_header(const grpc_httpcli_request* request,
+                                bool connection_close,
+                                std::vector<std::string>* buf) {
+   buf->push_back(request->http.path);
+-  buf->push_back(" HTTP/1.0\r\n");
++  buf->push_back(" HTTP/1.1\r\n");
+   /* just in case some crazy server really expects HTTP/1.1 */
+   buf->push_back("Host: ");
+   buf->push_back(request->host);

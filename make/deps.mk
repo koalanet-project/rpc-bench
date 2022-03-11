@@ -23,7 +23,7 @@ GRPC := $(DEPS_PATH)/include/grpcpp/grpcpp.h
 $(GRPC):
 	$(eval DIR=grpc)
 	git clone --recurse-submodules -b v1.43.0 https://github.com/grpc/grpc
-	cd $(DIR) && mkdir -p cmake/build && cd cmake/build && cmake -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB=ON -DgRPC_INSTALL=ON -DBUILD_SHARED_LIBS=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) ../.. && $(MAKE) && $(MAKE) install
+	cd $(DIR) && git apply ../grpc_proxy_connect.patch && mkdir -p cmake/build && cd cmake/build && cmake -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB=ON -DgRPC_INSTALL=ON -DBUILD_SHARED_LIBS=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) ../.. && $(MAKE) && $(MAKE) install
 	rm -rf $(DIR)
 
 # GRPC := $(DEPS_PATH)/include/grpcpp/grpcpp.h
