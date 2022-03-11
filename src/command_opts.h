@@ -9,7 +9,7 @@ namespace rpc_bench {
 // TODO(cjr): put these inside CommandsOpts
 const int kDefaultPort = 18000;
 const size_t kDefaultDataSize = 0;
-const int kDefaultConcurrency = 1;
+const int kDefaultConcurrency = 60;
 const bool kDefaultPersistent = false;
 const int kDefaultTimeSec = 10;
 const int kDefaultWarmupTimeSec = 1;

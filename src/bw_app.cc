@@ -1,6 +1,7 @@
 #include "bw_app.h"
-#include "prism/utils.h"
+
 #include "logging.h"
+#include "prism/utils.h"
 
 namespace rpc_bench {
 
@@ -27,15 +28,19 @@ int BwClientApp::Run() {
   while (1) {
     BwAck ack;
     PushData(bw_msg, &ack);
-    RPC_CHECK(ack.success) << "PushData failed.";
+    // RPC_CHECK(ack.success) << "PushData failed.";
 
-    total_bytes += bw_msg.Size();
-    meter_.AddBytes(bw_msg.Size());
+    if (ack.success) {
+      total_bytes += bw_msg.Size();
+      meter_.AddBytes(bw_msg.Size());
+    }
     auto now = std::chrono::high_resolution_clock::now();
     if (now - start > time_dura) {
-      RPC_LOG(INFO) << prism::FormatString(
-          "Transfer %.2f GBytes in %.2f seconds. Speed: %.2f Gb/s", total_bytes / 1e9,
-          (now - start).count() / 1e9, 8.0 * total_bytes / (now - start).count());
+      double ns = (now - start).count();
+      double GB = total_bytes / 1e9, MB = GB * 1000;
+      double Gbps = 8.0 * total_bytes / ns, Mbps = Gbps * 1000;
+      printf("Transfer %.2f GBytes (%.2f MBytes) in %.2f seconds. Speed: %.2f Gbps (%.2f Mbps)\n",
+             GB, MB, ns / 1e9, Gbps, Mbps);
       break;
     }
   }
