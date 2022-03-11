@@ -3,7 +3,8 @@ syntax = "proto3";
 package rpc_bench.lat_tput_app;
 
 service LatTputService {
-  rpc SendDataStreamFullDuplex(stream Data) returns (stream Ack) {}
+  rpc SendDataStreamFullDuplexA(stream Data) returns (stream Ack) {}
+  rpc SendDataStreamFullDuplexB(stream Data) returns (stream Ack) {}
 }
 
 message Data {

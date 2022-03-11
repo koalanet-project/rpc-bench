@@ -74,13 +74,16 @@ int GrpcLatClientApp::Run() {
 
 void GrpcLatServerApp::AsyncServerCall::Proceed(bool ok) {
   switch (status_) {
-    case CREATE:
+    case CREATE:  // start to listen
       status_ = PROCESS;
-      service_->RequestSendDataStreamFullDuplex(&ctx_, &stream_, cq_, cq_, this);
+      if (type_ == 0)
+        service_->RequestSendDataStreamFullDuplexA(&ctx_, &stream_, cq_, cq_, this);
+      else
+        service_->RequestSendDataStreamFullDuplexB(&ctx_, &stream_, cq_, cq_, this);
       break;
 
     case PROCESS:
-      new AsyncServerCall(service_, cq_, data_size_);
+      new AsyncServerCall(service_, cq_, data_size_, type_);  // create a new one to listen
       status_ = READ_COMPLETE;
       stream_.Read(&data_, this);
       break;
@@ -123,7 +126,8 @@ int GrpcLatServerApp::Run() {
   server_ = builder.BuildAndStart();
   printf("Async server listening on %s\n", bind_address.c_str());
 
-  new AsyncServerCall(&service_, cq_.get(), opts_.data_size);
+  new AsyncServerCall(&service_, cq_.get(), opts_.data_size, 0);
+  new AsyncServerCall(&service_, cq_.get(), opts_.data_size, 1);
   void* tag;
   bool ok;
   while (true) {

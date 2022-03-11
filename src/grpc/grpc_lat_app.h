@@ -44,7 +44,7 @@ class GrpcLatClientApp final : public LatClientApp {
     bool writing;
 
     AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_) {
-      this->stream = stub_->PrepareAsyncSendDataStreamFullDuplex(&this->context, cq_);
+      this->stream = stub_->PrepareAsyncSendDataStreamFullDuplexA(&this->context, cq_);
       this->stream->StartCall((void*)this);
       this->sendfinished = false;
       this->finished = false;
@@ -86,11 +86,14 @@ class GrpcLatServerApp final : public LatServerApp {
     Data data_;
     Ack ack_;
     size_t data_size_;
+    int type_;
 
    public:
-    AsyncServerCall(LatTputService::AsyncService* service, ServerCompletionQueue* cq, size_t data_size)
+    AsyncServerCall(LatTputService::AsyncService* service, ServerCompletionQueue* cq,
+                    size_t data_size, int type)
         : service_(service), cq_(cq), stream_(&ctx_), status_(CREATE), data_size_(data_size) {
-      ack_.set_data(std::string(data_size_, 'b'));
+      type_ = type;
+      ack_.set_data(std::string(data_size_, type == 0 ? '0' : '1'));
       Proceed(true);
     }
 

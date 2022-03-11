@@ -22,7 +22,8 @@ int GrpcTputClientApp::Run() {
 
   int req_cnt = 0;
   for (int i = 0; i < kDefaultConcurrency; i++) {
-    new AsyncClientCall(stub_, &cq_);
+    new AsyncClientCall(stub_, &cq_, 0);
+    new AsyncClientCall(stub_, &cq_, 1);
     req_cnt++;
   }
 
@@ -50,6 +51,7 @@ int GrpcTputClientApp::Run() {
           break;
         case AsyncClientCall::READ:
           rx_cnt++;
+        //   std::cout << call->ack.data() << std::endl;
           if ((call_per_req_ > 0 && call->count >= call_per_req_) || time_out) {
             call->call_status = AsyncClientCall::WRITEDONE;
           } else {
@@ -80,13 +82,15 @@ int GrpcTputClientApp::Run() {
       case AsyncClientCall::FINISH:
         call->stream->Finish(&call->status, (void*)call);
         break;
-      case AsyncClientCall::CLOSED:
+      case AsyncClientCall::CLOSED: {
+        int type = call->type_;
         delete call;
         req_cnt--;
         if (GPR_LIKELY(!time_out)) {
-          new AsyncClientCall(stub_, &cq_);
+          new AsyncClientCall(stub_, &cq_, type);
           req_cnt++;
         }
+      }
       default:
         break;
     }
