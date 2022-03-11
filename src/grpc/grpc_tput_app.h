@@ -44,9 +44,15 @@ class GrpcTputClientApp final : public TputClientApp {
     std::unique_ptr<ClientAsyncReaderWriter<Data, Ack>> stream;
     long count;
     CallStatus call_status;
+    int type_;
 
-    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_) {
-      this->stream = stub_->PrepareAsyncSendDataStreamFullDuplex(&this->context, cq_);
+    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_,
+                    int type) {
+      type_ = type;
+      if (type_ == 0)
+        this->stream = stub_->PrepareAsyncSendDataStreamFullDuplexA(&this->context, cq_);
+      else
+        this->stream = stub_->PrepareAsyncSendDataStreamFullDuplexB(&this->context, cq_);
       this->stream->StartCall((void*)this);
       this->count = 0;
       this->call_status = CREATE;
