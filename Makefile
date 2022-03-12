@@ -22,6 +22,7 @@ LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
 		$(GRPC_LIBS) -lgrpc++_reflection \
 		$(BRPC_LIBS) \
 		$(ZEROMQ_LIBS) \
+		-lglog -lunwind \
 		-lpthread \
 		-Wl,--as-needed \
 		-ldl

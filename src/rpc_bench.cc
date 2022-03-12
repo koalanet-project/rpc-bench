@@ -134,13 +134,11 @@ void CpuMonitor(const CommandOpts& opts) {
     auto end = std::chrono::high_resolution_clock::now();
     if (end - start > monitor_ms) break;
   }
-
-  //   RPC_LOG(INFO) << prism::FormatString(
-  //       "Average Idle in %.2f seconds is %.2f, CPU utilization is %.2f",
-  //       opts.monitor_time_sec.value(), idleavg, 100 - idleavg);
 }
 
 int main(int argc, char* argv[]) {
+  google::InitGoogleLogging(argv[0]);
+
   struct CommandOpts opts;
   if (ParseArgument(argc, argv, &opts)) {
     ShowUsage(argv[0]);

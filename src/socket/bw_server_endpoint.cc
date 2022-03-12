@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "logging.h"
-#include "prism/logging.h"
 #include "socket/poll.h"
 #include "socket/socket.h"
 #include "socket/socket_bw_app.h"

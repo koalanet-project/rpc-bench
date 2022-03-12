@@ -19,11 +19,11 @@ int GrpcLatClientApp::Run() {
 
   long overlimit = 0;
   std::vector<double> latencies;
-  bool time_out = false;
+  bool timeout = false;
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
   auto start = std::chrono::high_resolution_clock::now(), last = start;
 
-  while (!time_out) {
+  while (!timeout) {
     AsyncClientCall* call = new AsyncClientCall(stub_, &cq_, data);
 
     void* tag;
@@ -34,7 +34,7 @@ int GrpcLatClientApp::Run() {
       auto now = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> diff = now - last;
       latencies.push_back(1e6 * diff.count());
-      time_out = (now - start > time_dura);
+      timeout = (now - start > time_dura);
       last = std::chrono::high_resolution_clock::now();  // latencies.push_back may take some time
     } else
       overlimit++;
@@ -44,7 +44,7 @@ int GrpcLatClientApp::Run() {
   double sum = 0;
   for (double latency : latencies) sum += latency;
   size_t len = latencies.size();
-  printf("overlimit: %ld\n", overlimit);
+  printf("Overlimit: %ld\n", overlimit);
   printf(
       "%zu\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t "
       "[%zu samples]\n",
