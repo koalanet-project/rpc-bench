@@ -1,6 +1,7 @@
 #ifndef RPC_BENCH_APP_H_
 #define RPC_BENCH_APP_H_
 #include <iostream>
+#include <cstring>
 #include "command_opts.h"
 
 namespace rpc_bench {

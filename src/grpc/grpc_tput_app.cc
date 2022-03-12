@@ -26,7 +26,7 @@ int GrpcTputClientApp::Run() {
   bool ok = false;
   long count = 0, overlimit = 0;
   size_t rx_size = 0;
-  bool time_out = false;
+  bool timeout = false;
   int time_period = 1000, time_cnt = 0;
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
   auto start = std::chrono::high_resolution_clock::now();
@@ -45,10 +45,10 @@ int GrpcTputClientApp::Run() {
     if (GPR_UNLIKELY(time_cnt >= time_period)) {
       time_cnt = 0;
       auto now = std::chrono::high_resolution_clock::now();
-      time_out = (now - start > time_dura);
+      timeout = (now - start > time_dura);
     }
 
-    if (GPR_LIKELY(!time_out)) {
+    if (GPR_LIKELY(!timeout)) {
       new AsyncClientCall(stub_, &cq_, data);
       req_cnt++;
     }
@@ -58,7 +58,7 @@ int GrpcTputClientApp::Run() {
   std::chrono::duration<double> seconds = end - start;
   double duration = seconds.count();
 
-  printf("overlimit: %ld\n", overlimit);
+  printf("Overlimit: %ld\n", overlimit);
   printf("tx_gbps,\t rx_gbps,\t tx_rps,\t rx_rps\n");
   double tx_gbps = 8.0 * count * opts_.data_size / duration / 1e9;
   double rx_gbps = 8.0 * rx_size / duration / 1e9;
