@@ -8,3 +8,7 @@ Session.vim
 *.pb.h
 *.pb.cc
 *.svg
+*.log
+
+__pycache__/
+

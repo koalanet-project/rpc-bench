@@ -59,12 +59,12 @@ int GrpcTputClientApp::Run() {
   double duration = seconds.count();
 
   printf("Overlimit: %ld\n", overlimit);
-  printf("tx_gbps,\t rx_gbps,\t tx_rps,\t rx_rps\n");
+  printf("tx_gbps\t rx_gbps\t tx_rps\t rx_rps\n");
   double tx_gbps = 8.0 * count * opts_.data_size / duration / 1e9;
   double rx_gbps = 8.0 * rx_size / duration / 1e9;
   double tx_rps = count / duration;
   double rx_rps = tx_rps;
-  printf("%.6lf,\t %.6lf,\t %.1lf,\t %.1lf\n", tx_gbps, rx_gbps, tx_rps, rx_rps);
+  printf("%.6lf\t %.6lf\t %.2lf\t %.2lf\n", tx_gbps, rx_gbps, tx_rps, rx_rps);
 
   return 0;
 }
