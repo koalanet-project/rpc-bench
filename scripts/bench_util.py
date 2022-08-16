@@ -6,7 +6,7 @@ import time
 
 args_parser = argparse.ArgumentParser()
 args_parser.add_argument('server', metavar='server',
-                         type=str, nargs='?', default='192.168.211.130')
+                         type=str, nargs='?', default='192.168.211.130', help="Server address")
 args_parser.add_argument(
     '--opt', type=str, nargs='?', default='', help="Options of rpc-bench")
 
