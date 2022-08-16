@@ -38,17 +38,17 @@ def run_server(args, opt):
         envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_server.log 2>&1 &" % opt.a
     server_script = ''' 
     cd ~/nfs/rpc-bench; %s;
-    nohup numactl -N 0 -m 0 ./build/rpc-bench -a %s -r grpc -d %d >/dev/null 2>&1 & 
+    GLOG_minloglevel=3 nohup numactl -N 0 -m 0 ./build/rpc-bench -a %s -r grpc -d %d >/dev/null 2>&1 & 
     ''' % (envoy_cmd, opt.a, opt.d)
     ssh_cmd(args.server, server_script)
 
 
 def run_client(args, opt):
-    env = os.environ
+    env = dict(os.environ, GLOG_minloglevel="3")
     if args.envoy:
         os.system(
             "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_client.log 2>&1 &" % opt.a)
-        env = dict(os.environ, http_proxy="http://127.0.0.1:10000/")
+        env = dict(env, http_proxy="http://127.0.0.1:10000/")
     client_script = '''
     numactl -N 0 -m 0  ./build/rpc-bench -a %s -r grpc -d %d -p %d -t %d %s
     ''' % (opt.a, opt.d, opt.p, opt.t, args.server)
