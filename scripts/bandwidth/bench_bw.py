@@ -8,7 +8,7 @@ sys.path.append("..")
 import bench_util as util
 
 util.args_parser.add_argument(
-    '--range', type=str, nargs='?', default='1,12', help="l,r means [1<<l, 1<<r] KByte")
+    '--range', type=str, nargs='?', default='1,14', help="l,r means [1<<l, 1<<r) KByte")
 util.args_parser.add_argument(
     '--step', type=int, nargs='?', default=2, help="Range step")
 args = util.args_parser.parse_args()
