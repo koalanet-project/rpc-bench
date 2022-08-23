@@ -18,6 +18,7 @@ opt = util.opt_parser.parse_args(("%s -a bandwidth" % args.opt).split())
 os.chdir("../../")
 
 pattern = re.compile(r"([0-9]*?\.[0-9]*?)\sGbps")
+pattern_mbps = re.compile(r"([0-9]*?\.[0-9]*?)\sMb/s")
 res = []
 for k in args.range:
     args.envoy = False
@@ -27,8 +28,12 @@ for k in args.range:
     util.run_server(args, opt)
     out = util.run_client(args, opt)
 
+    print(out)
     item = pattern.search(out[-1])
-    res.append(float(item.group(1)))
+    item2 = re.findall(pattern_mbps, '\n'.join(out))
+    print(item2)
+    # res.append(float(item.group(1)))
+    res.append([float(i) for i in item2[1:]])
 
 res_envoy = []
 for k in args.range:
@@ -41,14 +46,20 @@ for k in args.range:
     opt_client.p = 10001  # envoy port
     out = util.run_client(args, opt_client)
 
+    print(out)
     item = pattern.search(out[-1])
-    res_envoy.append(float(item.group(1)))
+    item2 = re.findall(pattern_mbps, '\n'.join(out))
+    print(item2)
+    # res_envoy.append(float(item.group(1)))
+    res_envoy.append([float(i) for i in item2[1:]])
 
 util.killall(args)
 
 writer = csv.writer(sys.stdout, lineterminator='\n')
-writer.writerow(['Message Size (KB)', 'Bandwidth (Gb/s)', 'Solution'])
-for k, y in zip(args.range, res):
-    writer.writerow([1 << k, y, "gRPC"])
-for k, y in zip(args.range, res_envoy):
-    writer.writerow([1 << k, y, "gRPC (envoy)"])
+writer.writerow(['RPC Size (KB)', 'Goodput (Gb/s)', 'Solution'])
+for k, ys in zip(args.range, res):
+    for y in ys:
+        writer.writerow([1 << k, y, "gRPC"])
+for k, ys in zip(args.range, res_envoy):
+    for y in ys:
+        writer.writerow([1 << k, y, "gRPC (envoy)"])

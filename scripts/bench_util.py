@@ -37,14 +37,14 @@ def run_server(args, opt):
     if args.envoy:
         envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_server.log 2>&1 &" % opt.a
     server_script = ''' 
-    cd ~/nfs/rpc-bench; %s;
+    cd ~/nfs/Developing/rpc-bench; %s;
     GLOG_minloglevel=3 nohup numactl -N 0 -m 0 ./build/rpc-bench -a %s -r grpc -d %d >/dev/null 2>&1 & 
     ''' % (envoy_cmd, opt.a, opt.d)
     ssh_cmd(args.server, server_script)
     time.sleep(2)
 
 def run_client(args, opt):
-    env = dict(os.environ, GLOG_minloglevel="3")
+    env = dict(os.environ, GLOG_minloglevel="0", GLOG_logtostderr="1")
     if args.envoy:
         os.system(
             "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_client.log 2>&1 &" % opt.a)
@@ -54,5 +54,6 @@ def run_client(args, opt):
     ''' % (opt.a, opt.d, opt.p, opt.t, args.server)
     with subprocess.Popen(client_script.split(), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
         out, err = proc.communicate()
+    err = err.decode().strip().split('\n')
     out = out.decode().strip().split('\n')
-    return out
+    return err + out
