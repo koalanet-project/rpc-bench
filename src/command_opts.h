@@ -9,7 +9,7 @@ namespace rpc_bench {
 // TODO(cjr): put these inside CommandsOpts
 const int kDefaultPort = 18000;
 const size_t kDefaultDataSize = 0;
-const int kDefaultConcurrency = 60;
+const int kDefaultConcurrency = 32;
 const bool kDefaultPersistent = false;
 const int kDefaultTimeSec = 10;
 const int kDefaultWarmupTimeSec = 1;
@@ -22,6 +22,7 @@ struct CommandOpts {
   std::optional<std::string> rpc;
   std::optional<std::string> proto;
   size_t data_size;
+  int concurrency;
   bool persistent;
   double time_duration_sec;
   std::optional<double> monitor_time_sec;
@@ -30,6 +31,7 @@ struct CommandOpts {
   CommandOpts() {
     port = kDefaultPort;
     data_size = kDefaultDataSize;
+    concurrency = kDefaultConcurrency;
     persistent = kDefaultPersistent;
     time_duration_sec = kDefaultTimeSec;
     monitor_warmup_sec = kDefaultWarmupTimeSec;
@@ -45,6 +47,7 @@ struct CommandOpts {
        << ", rpc: " << rpc.value_or(NULLOPT)
        << ", proto: " << proto.value_or(NULLOPT)
        << ", data_size: " << data_size
+       << ", concurrency: " << concurrency
        << ", persistent: " << persistent
        << ", time: " << time_duration_sec
        << ", monitor-time: " << (monitor_time_sec.has_value() ? std::to_string(monitor_time_sec.value()) : NULLOPT)

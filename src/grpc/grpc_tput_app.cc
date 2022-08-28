@@ -1,6 +1,7 @@
 #include "grpc/grpc_tput_app.h"
 
 #include "logging.h"
+#include "meter.h"
 
 namespace rpc_bench {
 namespace grpc {
@@ -17,7 +18,7 @@ int GrpcTputClientApp::Run() {
   Data data;
   data.set_data(std::string(opts_.data_size, 'a'));
   int req_cnt = 0;
-  for (int i = 0; i < kDefaultConcurrency; i++) {
+  for (int i = 0; i < opts_.concurrency; i++) {
     new AsyncClientCall(stub_, &cq_, data);
     req_cnt++;
   }
@@ -31,11 +32,13 @@ int GrpcTputClientApp::Run() {
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
   auto start = std::chrono::high_resolution_clock::now();
 
+  Meter meter = Meter(1000, "meter", 1);
   while (req_cnt > 0 && cq_.Next(&tag, &ok)) {
     AsyncClientCall* call = static_cast<AsyncClientCall*>(tag);
     if (call->status.ok()) {
       count++;
       rx_size += call->ack.ByteSizeLong();
+      meter.AddQps(opts_.data_size, 1);
     } else
       overlimit++;
     delete call;
