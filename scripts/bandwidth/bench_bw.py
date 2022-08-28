@@ -29,7 +29,7 @@ def parse_result(out, goodputs, rates):
     ops = re.findall(pattern_rps, '\n'.join(out))
     print('rate', ops)
     goodputs.append([float(i) for i in bw[1:]])
-    rates.append([float(i) for i in rates[1:]])
+    rates.append([float(i) for i in ops[1:]])
 
 goodputs = []
 rates = []

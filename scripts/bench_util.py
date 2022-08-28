@@ -35,18 +35,21 @@ def killall(args):
 
 def run_server(args, opt):
     envoy_cmd = ""
+    print(f'enable Envoy: {args.envoy}')
     if args.envoy:
         envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_server.log 2>&1 &" % opt.a
     server_script = ''' 
     cd ~/nfs/Developing/rpc-bench; %s;
-    GLOG_minloglevel=3 nohup numactl -N 0 -m 0 ./build/rpc-bench -a %s -r grpc -d %d >/dev/null 2>&1 & 
+    GLOG_minloglevel=2 nohup numactl -N 0 -m 0 ./build/rpc-bench -a %s -r grpc -d %d >/dev/null 2>&1 & 
     ''' % (envoy_cmd, opt.a, opt.d)
+    print('server envoy:', envoy_cmd)
     print('server:', server_script)
     ssh_cmd(args.server, server_script)
     time.sleep(2)
 
 def run_client(args, opt):
-    env = dict(os.environ, GLOG_minloglevel="0", GLOG_logtostderr="1")
+    env = dict(os.environ, GLOG_minloglevel="2", GLOG_logtostderr="1")
+    print(f'enable Envoy: {args.envoy}')
     if args.envoy:
         os.system(
             "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_client.log 2>&1 &" % opt.a)
