@@ -41,7 +41,7 @@ def run_server(args, opt):
     GLOG_minloglevel=3 nohup numactl -N 0 -m 0 ./build/rpc-bench -a %s -r grpc -d %d >/dev/null 2>&1 & 
     ''' % (envoy_cmd, opt.a, opt.d)
     ssh_cmd(args.server, server_script)
-
+    time.sleep(2)
 
 def run_client(args, opt):
     env = dict(os.environ, GLOG_minloglevel="3")
