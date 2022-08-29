@@ -39,8 +39,9 @@ for k in args.range:
     opt.d = (1 << k) * 1024
     print("Running size %d" % opt.d, file=sys.stderr)
     util.killall(args)
-    util.run_server(args, opt)
     opt.d = 32
+    util.run_server(args, opt)
+    opt.d = (1 << k) * 1024
     out = util.run_client(args, opt)
     parse_result(out, goodputs, rates)
 
@@ -51,8 +52,9 @@ for k in args.range:
     opt.d = (1 << k) * 1024
     print("Running size %d with envoy" % opt.d, file=sys.stderr)
     util.killall(args)
-    util.run_server(args, opt)
     opt.d = 32
+    util.run_server(args, opt)
+    opt.d = (1 << k) * 1024
     opt_client = copy.deepcopy(opt)
     opt_client.p = 10001  # envoy port
     out = util.run_client(args, opt_client)
