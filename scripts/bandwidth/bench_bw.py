@@ -36,9 +36,9 @@ rates = []
 
 for k in args.range:
     args.envoy = False
+    opt.d = (1 << k) * 1024
     print("Running size %d" % opt.d, file=sys.stderr)
     util.killall(args)
-    opt.d = (1 << k) * 1024
     util.run_server(args, opt)
     opt.d = 32
     out = util.run_client(args, opt)
@@ -48,9 +48,9 @@ goodputs_envoy = []
 rates_envoy = []
 for k in args.range:
     args.envoy = True
+    opt.d = (1 << k) * 1024
     print("Running size %d with envoy" % opt.d, file=sys.stderr)
     util.killall(args)
-    opt.d = (1 << k) * 1024
     util.run_server(args, opt)
     opt.d = 32
     opt_client = copy.deepcopy(opt)
