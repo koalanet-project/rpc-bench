@@ -6,7 +6,7 @@ import time
 
 args_parser = argparse.ArgumentParser()
 args_parser.add_argument('server', metavar='server',
-                         type=str, nargs='?', default='192.168.211.130', help="Server address")
+                         type=str, nargs='?', default='192.168.211.130')
 args_parser.add_argument(
     '--opt', type=str, nargs='?', default='', help="Options of rpc-bench")
 
@@ -46,6 +46,7 @@ def run_server(args, opt):
     print('server:', server_script)
     ssh_cmd(args.server, server_script)
     time.sleep(2)
+
 
 def run_client(args, opt):
     env = dict(os.environ, GLOG_minloglevel="2", GLOG_logtostderr="1")
