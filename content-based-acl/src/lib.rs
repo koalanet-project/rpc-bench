@@ -3,8 +3,12 @@ use proxy_wasm::types::{Action, LogLevel};
 
 use prost::Message;
 
-pub mod lat_tput_app {
-    include!(concat!(env!("OUT_DIR"), "/rpc_bench.lat_tput_app.rs"));
+// pub mod lat_tput_app {
+//     include!(concat!(env!("OUT_DIR"), "/rpc_bench.lat_tput_app.rs"));
+// }
+
+pub mod reservation {
+    include!(concat!(env!("OUT_DIR"), "/reservation.rs"));
 }
 
 #[no_mangle]
@@ -24,46 +28,57 @@ impl Context for AccessControl {}
 impl HttpContext for AccessControl {
     fn on_http_request_headers(&mut self, num_of_headers: usize, end_of_stream: bool) -> Action {
         log::info!("on_http_request_headers, num_of_headers: {num_of_headers}, end_of_stream: {end_of_stream}");
-        if end_of_stream {
-            for (name, value) in &self.get_http_request_headers() {
-                log::info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
-            }
+        if !end_of_stream {
+            return Action::Continue;
         }
 
+        for (name, value) in &self.get_http_request_headers() {
+            log::info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
+        }
+
+        // If there is a Content-Length header and we change the length of
+        // the body later, then clients will break. So remove it.
+        // We must do this here, because once we exit this function we
+        // can no longer modify the response headers.
+        self.set_http_response_header("content-length", None);
         Action::Continue
-        // match self.get_http_request_header("token") {
-        //     Some(token) if token.parse::<u64>().is_ok() && is_prime(token.parse().unwrap()) => {
-        //         self.resume_http_request();
-        //         Action::Continue
-        //     }
-        //     _ => {
-        //         self.send_http_response(
-        //             403,
-        //             vec![("Powered-By", "proxy-wasm")],
-        //             Some(b"Access forbidden.\n"),
-        //         );
-        //         Action::Pause
-        //     }
-        // }
     }
 
     fn on_http_request_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
-        log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
-        if end_of_stream {
-            log::info!("body_size: {}", body_size);
+        if !end_of_stream {
+            // Wait -- we'll be called again when the complete body is buffered
+            // at the host side.
+            return Action::Pause;
         }
+
+        static REJECT_HEADERS: Vec<(&str, &str)> = vec![];
+
+        // Replace the message body if it contains the text "secret".
+        // Since we returned "Pause" previuously, this will return the whole body.
+        log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
         if let Some(body) = self.get_http_request_body(0, body_size) {
             // Parse grpc payload
             log::info!("body: {:?}", body);
-            match lat_tput_app::Data::decode(&body[5..]) {
-                Ok(data) => {
-                    log::info!("data.len(): {}", data.data.len());
+            // Skip the first 5 bytes
+            match reservation::Request::decode(&body[5..]) {
+                Ok(req) => {
+                    log::info!("req: {:?}", req);
+
+                    if req.customer_name == "danyang" {
+                        // block the user called 'danyang' ;-)
+                        self.send_http_response(
+                            403,
+                            vec![("Hello", "World"), ("Powered-By", "proxy-wasm")],
+                            // REJECT_HEADERS.clone(),
+                            Some(b"Access forbidden.\n"),
+                        );
+                        return Action::Pause;
+                    }
                 }
-                Err(e) => {
-                    log::warn!("decode error: {}", e);
-                }
+                Err(e) => log::warn!("decode error: {}", e),
             }
         }
+
         Action::Continue
     }
 }
