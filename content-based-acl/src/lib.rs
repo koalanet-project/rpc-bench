@@ -20,21 +20,22 @@ pub fn _start() {
 }
 
 struct AccessControl {
+    #[allow(unused)]
     context_id: u32,
 }
 
 impl Context for AccessControl {}
 
 impl HttpContext for AccessControl {
-    fn on_http_request_headers(&mut self, num_of_headers: usize, end_of_stream: bool) -> Action {
-        log::info!("on_http_request_headers, num_of_headers: {num_of_headers}, end_of_stream: {end_of_stream}");
+    fn on_http_request_headers(&mut self, _num_of_headers: usize, end_of_stream: bool) -> Action {
+        // log::info!("on_http_request_headers, num_of_headers: {num_of_headers}, end_of_stream: {end_of_stream}");
         if !end_of_stream {
             return Action::Continue;
         }
 
-        for (name, value) in &self.get_http_request_headers() {
-            log::info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
-        }
+        // for (name, value) in &self.get_http_request_headers() {
+        //     log::info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
+        // }
 
         // If there is a Content-Length header and we change the length of
         // the body later, then clients will break. So remove it.
@@ -51,26 +52,26 @@ impl HttpContext for AccessControl {
             return Action::Pause;
         }
 
-        static REJECT_HEADERS: Vec<(&str, &str)> = vec![];
-
         // Replace the message body if it contains the text "secret".
         // Since we returned "Pause" previuously, this will return the whole body.
-        log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
+        // log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
         if let Some(body) = self.get_http_request_body(0, body_size) {
-            // Parse grpc payload
-            log::info!("body: {:?}", body);
-            // Skip the first 5 bytes
+
+            // log::info!("body: {:?}", body);
+            // Parse grpc payload, skip the first 5 bytes
             match reservation::Request::decode(&body[5..]) {
                 Ok(req) => {
-                    log::info!("req: {:?}", req);
+                    // log::info!("req: {:?}", req);
 
                     if req.customer_name == "danyang" {
                         // block the user called 'danyang' ;-)
                         self.send_http_response(
-                            403,
-                            vec![("Hello", "World"), ("Powered-By", "proxy-wasm")],
-                            // REJECT_HEADERS.clone(),
-                            Some(b"Access forbidden.\n"),
+                            200,
+                            vec![
+                                ("grpc-status", "1"),
+                                ("grpc-message", "Access forbidden.\n"),
+                            ],
+                            None,
                         );
                         return Action::Pause;
                     }

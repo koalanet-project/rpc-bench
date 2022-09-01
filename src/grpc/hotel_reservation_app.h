@@ -35,15 +35,17 @@ class HotelReservationClientApp : public App {
  private:
   struct AsyncClientCall {
     Result result;
+    size_t size;
     ClientContext context;
     Status status;
     std::unique_ptr<ClientAsyncResponseReader<Result>> resp_reader;
 
-    AsyncClientCall(const std::unique_ptr<Reservation::Stub>& stub_, CompletionQueue* cq_,
-                    Request& data) {
-      this->resp_reader = stub_->PrepareAsyncMakeReservation(&this->context, data, cq_);
+    AsyncClientCall(const std::unique_ptr<Reservation::Stub>& stub, CompletionQueue* cq,
+                    Request& data, size_t size) {
+      this->resp_reader = stub->PrepareAsyncMakeReservation(&this->context, data, cq);
       this->resp_reader->StartCall();
       this->resp_reader->Finish(&this->result, &this->status, this);
+      this->size = size;
     }
   };
 

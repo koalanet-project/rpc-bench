@@ -14,6 +14,20 @@
 namespace rpc_bench {
 namespace grpc {
 
+static unsigned int g_seed;
+
+// Used to seed the generator.
+inline void fast_srand(int seed) {
+    g_seed = seed;
+}
+
+// Compute a pseudorandom integer.
+// Output value in range [0, 32767]
+inline int fast_rand(void) {
+    g_seed = (214013*g_seed+2531011);
+    return (g_seed>>16)&0x7FFF;
+}
+
 // HotelReservationClientApp
 void HotelReservationClientApp::Init() {
   std::string remote_uri = opts_.host.value() + ":" + std::to_string(opts_.port);
@@ -22,20 +36,42 @@ void HotelReservationClientApp::Init() {
       ::grpc::CreateChannel(remote_uri, ::grpc::InsecureChannelCredentials()));
 }
 
+auto GenerateWorkload() -> std::tuple<Request&, size_t> {
+  static bool init = false;
+  static Request request[2];
+  static size_t req_size[2];
+  if (!init) {
+    request[0].set_customername("danyang");
+    request[0].add_hotelid();
+    request[0].set_hotelid(0, kHotelId);
+    request[0].set_indate("2022-09-01");
+    request[0].set_outdate("2022-09-02");
+    request[0].set_roomnumber(128);
+
+    request[1].set_customername("matt");
+    request[1].add_hotelid();
+    request[1].set_hotelid(0, kHotelId);
+    request[1].set_indate("2022-09-02");
+    request[1].set_outdate("2022-09-03");
+    request[1].set_roomnumber(129);
+
+    req_size[0] = request[0].ByteSizeLong();
+    req_size[1] = request[1].ByteSizeLong();
+
+    init = true;
+  }
+  // 1% danyang, 99% matt
+  int index = 1 - (int)(fast_rand() % 100 < 1);
+  return {request[index], req_size[index]};
+}
+
 int HotelReservationClientApp::Run() {
   Init();
 
-  Request request;
-  request.set_customername("danyang");
-  request.add_hotelid();
-  request.set_hotelid(0, kHotelId);
-  request.set_indate("2022-09-01");
-  request.set_outdate("2022-09-02");
-  request.set_roomnumber(128);
-
   int req_cnt = 0;
   for (int i = 0; i < opts_.concurrency; i++) {
-    new AsyncClientCall(stub_, &cq_, request);
+    auto [request, size] = GenerateWorkload();
+    new AsyncClientCall(stub_, &cq_, request, size);
     req_cnt++;
   }
 
@@ -45,7 +81,7 @@ int HotelReservationClientApp::Run() {
   size_t rx_size = 0;
   bool timeout = false;
   int time_period = 1000, time_cnt = 0;
-  auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
+  auto time_dura = std::chrono::seconds(static_cast<long>(opts_.time_duration_sec));
   auto start = std::chrono::high_resolution_clock::now();
 
   Meter meter = Meter(1000, "meter", 1);
@@ -54,26 +90,43 @@ int HotelReservationClientApp::Run() {
     if (call->status.ok()) {
       count++;
       rx_size += call->result.ByteSizeLong();
-      meter.AddQps(opts_.data_size, 1);
-    } else
+      meter.AddQps(call->size, 1);
+    } else {
       overlimit++;
+      meter.AddQps(0, 0);
+    }
+
     delete call;
     req_cnt--;
 
     time_cnt += 1;
     if (GPR_UNLIKELY(time_cnt >= time_period)) {
+      // Do not check time every iteration.
       time_cnt = 0;
       auto now = std::chrono::high_resolution_clock::now();
       timeout = (now - start > time_dura);
     }
 
     if (GPR_LIKELY(!timeout)) {
-      new AsyncClientCall(stub_, &cq_, request);
+      auto [request, size] = GenerateWorkload();
+      new AsyncClientCall(stub_, &cq_, request, size);
       req_cnt++;
     }
   }
 
-    return 0;
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> seconds = end - start;
+  double duration = seconds.count();
+
+  printf("Overlimit: %ld\n", overlimit);
+  printf("tx_gbps\t rx_gbps\t tx_rps\t rx_rps\n");
+  double tx_gbps = 8.0 * count * opts_.data_size / duration / 1e9;
+  double rx_gbps = 8.0 * rx_size / duration / 1e9;
+  double tx_rps = count / duration;
+  double rx_rps = tx_rps;
+  printf("%.6lf\t %.6lf\t %.2lf\t %.2lf\n", tx_gbps, rx_gbps, tx_rps, rx_rps);
+
+  return 0;
 }
 
 // grpc server handler
