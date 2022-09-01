@@ -57,7 +57,7 @@ static_resources:
                     runtime: envoy.wasm.runtime.v8
                     code:
                       local:
-                        filename: /tmp/content-based-acl.wasm
+                        filename: /etc/content_based_acl.wasm
                     allow_precompiled: true
             - name: envoy.filters.http.router # must be the last filter in a http filter chain.
               typed_config:

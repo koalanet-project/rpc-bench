@@ -6,5 +6,5 @@ services:
       dockerfile: Dockerfile.proxy
     volumes:
       - ./envoy-wasm.yaml:/etc/envoy.yaml
-      - /tmp/myenvoyfilter.wasm:/etc/myenvoyfilter.wasm
+      - /tmp/content_based_acl.wasm:/etc/content_based_acl.wasm
     network_mode: host

@@ -1,6 +1,11 @@
-use log::info;
-use proxy_wasm::traits::*;
-use proxy_wasm::types::*;
+use proxy_wasm::traits::{Context, HttpContext};
+use proxy_wasm::types::{Action, LogLevel};
+
+use prost::Message;
+
+pub mod lat_tput_app {
+    include!(concat!(env!("OUT_DIR"), "/rpc_bench.lat_tput_app.rs"));
+}
 
 #[no_mangle]
 pub fn _start() {
@@ -18,10 +23,10 @@ impl Context for AccessControl {}
 
 impl HttpContext for AccessControl {
     fn on_http_request_headers(&mut self, num_of_headers: usize, end_of_stream: bool) -> Action {
-        info!("on_http_request_headers, num_of_headers: {num_of_headers}, end_of_stream: {end_of_stream}");
+        log::info!("on_http_request_headers, num_of_headers: {num_of_headers}, end_of_stream: {end_of_stream}");
         if end_of_stream {
             for (name, value) in &self.get_http_request_headers() {
-                info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
+                log::info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
             }
         }
 
@@ -43,13 +48,21 @@ impl HttpContext for AccessControl {
     }
 
     fn on_http_request_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
-        info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
+        log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
         if end_of_stream {
-            info!("body_size: {}", body_size);
+            log::info!("body_size: {}", body_size);
         }
         if let Some(body) = self.get_http_request_body(0, body_size) {
             // Parse grpc payload
-            info!("body: {:?}", body);
+            log::info!("body: {:?}", body);
+            match lat_tput_app::Data::decode(&body[5..]) {
+                Ok(data) => {
+                    log::info!("data.len(): {}", data.data.len());
+                }
+                Err(e) => {
+                    log::warn!("decode error: {}", e);
+                }
+            }
         }
         Action::Continue
     }
