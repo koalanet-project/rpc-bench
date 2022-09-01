@@ -1,0 +1,93 @@
+# envoy server-to-service sidecar deployment
+admin:
+  address:
+    socket_address: { address: 127.0.0.1, port_value: 9901 }
+
+static_resources:
+  listeners:
+  - name: listener_ingress
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 10000 }
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              - match: { prefix: "/" }
+                route: { cluster: ingress_service }
+          http_filters:
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  - name: listener_egress_http
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 10001 } # change it to 127.0.0.1
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: egress_http
+          codec_type: AUTO
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              - match: { prefix: "/" }
+                route: { cluster: egress_service_http }
+          http_filters:
+            - name: envoy.filters.http.wasm
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                config:
+                  name: prime_auth
+                  root_id: prime_auth
+                  vm_config:
+                    vm_id: vm.sentinel.prime_auth
+                    runtime: envoy.wasm.runtime.v8
+                    code:
+                      local:
+                        filename: /tmp/content-based-acl.wasm
+                    allow_precompiled: true
+            - name: envoy.filters.http.router # must be the last filter in a http filter chain.
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+  - name: ingress_service
+    connect_timeout: 0.25s
+    type: STATIC
+    http2_protocol_options: {} # avoid request converted to http1.1 (THIS IS CRUCIAL!)
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: ingress_service
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 18000  # port of rpc-bench server
+  - name: egress_service_http
+    connect_timeout: 0.25s
+    type: STRICT_DNS
+    http2_protocol_options: {} # avoid request converted to http1.1 (THIS IS CRUCIAL!)
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: egress_service_http
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:  # the address of the upstream envoy
+                address: rdma0.danyang-06
+                port_value: 10000

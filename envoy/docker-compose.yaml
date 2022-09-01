@@ -1,0 +1,10 @@
+version: '2'
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    volumes:
+      - ./envoy-wasm.yaml:/etc/envoy.yaml
+      - /tmp/myenvoyfilter.wasm:/etc/myenvoyfilter.wasm
+    network_mode: host
