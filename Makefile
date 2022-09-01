@@ -80,7 +80,7 @@ build/%.o: src/%.cc $(GEN_HEADERS) $(GRPC) $(BRPC) $(ZEROMQ)
 
 compiledb:
 	@[[ -f compile_commands.json ]] && mv -f compile_commands.json /tmp || true
-	bear make -C .
+	bear -- make -C .
 
 -include build/*.d
 -include build/*/*.d
