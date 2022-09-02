@@ -27,15 +27,15 @@ static_resources:
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-  - name: listener_egress
+  - name: listener_egress_http_http
     address:
-      socket_address: { address: 127.0.0.1, port_value: 10001 }
+      socket_address: { address: 0.0.0.0, port_value: 10001 } # change it to 127.0.0.1
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: egress_http
+          stat_prefix: egress_http_http
           codec_type: AUTO
           route_config:
             name: local_route
@@ -43,22 +43,9 @@ static_resources:
             - name: local_service
               domains: ["*"]
               routes:
-              - match:
-                  connect_matcher: {}  # This is critical to have the forward proxy working.
-                route:
-                  cluster: dynamic_forward_proxy_cluster
-                  upgrade_configs:  # This is critical to have the forward proxy working.
-                    - upgrade_type: CONNECT
-              - match:
-                  prefix: "/"
-                route:
-                  cluster: dynamic_forward_proxy_cluster
+              - match: { prefix: "/" }
+                route: { cluster: egress_service_http_http }
           http_filters:
-            - name: envoy.filters.http.dynamic_forward_proxy
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
-                dns_cache_config:
-                  name: dynamic_forward_proxy_cache_config
             - name: envoy.filters.http.router
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -77,13 +64,17 @@ static_resources:
               socket_address:
                 address: 127.0.0.1
                 port_value: 18000  # port of rpc-bench server
-  - name: dynamic_forward_proxy_cluster
-    connect_timeout: 1s
-    lb_policy: CLUSTER_PROVIDED
+  - name: egress_service_http_http
+    connect_timeout: 0.25s
+    type: STRICT_DNS
     http2_protocol_options: {} # avoid request converted to http1.1 (THIS IS CRUCIAL!)
-    cluster_type:
-      name: envoy.clusters.dynamic_forward_proxy
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
-        dns_cache_config:
-          name: dynamic_forward_proxy_cache_config
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: egress_service_http_http
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:  # the address of the upstream envoy
+                address: rdma0.danyang-06
+                port_value: 10000

@@ -27,7 +27,7 @@ static_resources:
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-  - name: listener_egress
+  - name: listener_egress_http
     address:
       socket_address: { address: 127.0.0.1, port_value: 10001 }
     filter_chains:
@@ -59,7 +59,20 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
                 dns_cache_config:
                   name: dynamic_forward_proxy_cache_config
-            - name: envoy.filters.http.router
+            - name: envoy.filters.http.wasm
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                config:
+                  name: acl-block-customer
+                  root_id: acl-block-customer
+                  vm_config:
+                    vm_id: vm.acl-block-customer
+                    runtime: envoy.wasm.runtime.v8
+                    code:
+                      local:
+                        filename: /etc/content_based_acl.wasm
+                    allow_precompiled: true
+            - name: envoy.filters.http.router # must be the last filter in a http filter chain.
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
@@ -80,7 +93,7 @@ static_resources:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 1s
     lb_policy: CLUSTER_PROVIDED
-    http2_protocol_options: {} # avoid request converted to http1.1 (THIS IS CRUCIAL!)
+    # http2_protocol_options: {} # Do not use http2 because this would complicate parsing gRPC object from the stream.
     cluster_type:
       name: envoy.clusters.dynamic_forward_proxy
       typed_config:

@@ -29,13 +29,14 @@ impl Context for AccessControl {}
 impl HttpContext for AccessControl {
     fn on_http_request_headers(&mut self, _num_of_headers: usize, end_of_stream: bool) -> Action {
         // log::info!("on_http_request_headers, num_of_headers: {num_of_headers}, end_of_stream: {end_of_stream}");
-        if !end_of_stream {
-            return Action::Continue;
-        }
 
         // for (name, value) in &self.get_http_request_headers() {
         //     log::info!("In WASM : #{} -> {}: {}", self.context_id, name, value);
         // }
+
+        if !end_of_stream {
+            return Action::Continue;
+        }
 
         // If there is a Content-Length header and we change the length of
         // the body later, then clients will break. So remove it.
@@ -46,15 +47,21 @@ impl HttpContext for AccessControl {
     }
 
     fn on_http_request_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
+        // log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
         if !end_of_stream {
             // Wait -- we'll be called again when the complete body is buffered
             // at the host side.
+            // Returns Continue because there's other filters to process. Return Pause may cause
+            // problem in this case.
+            // if let Some(body) = self.get_http_request_body(0, body_size) {
+            //     log::info!("body: {:?}", body);
+            // }
+            // return Action::Continue;
             return Action::Pause;
         }
 
         // Replace the message body if it contains the text "secret".
         // Since we returned "Pause" previuously, this will return the whole body.
-        // log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
         if let Some(body) = self.get_http_request_body(0, body_size) {
 
             // log::info!("body: {:?}", body);
