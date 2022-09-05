@@ -40,7 +40,7 @@ endif
 
 PROTO_PATH = src/protos
 #PROTOS = $(shell find $(PROTO_PATH) -type f -name "*.proto")
-PROTOS = $(addprefix $(PROTO_PATH)/,bw_app.proto lat_tput_app.proto)
+PROTOS = $(addprefix $(PROTO_PATH)/,bw_app.proto lat_tput_app.proto reservation.proto)
 GEN_SRCS = $(PROTOS:.proto=.pb.cc) $(PROTOS:.proto=.grpc.pb.cc) $(addprefix $(PROTO_PATH)/,bw_app_brpc.pb.cc)
 GEN_HEADERS = $(PROTOS:.proto=.pb.h) $(PROTOS:.proto=.grpc.pb.h) $(addprefix $(PROTO_PATH)/,bw_app_brpc.pb.h)
 
@@ -80,7 +80,7 @@ build/%.o: src/%.cc $(GEN_HEADERS) $(GRPC) $(BRPC) $(ZEROMQ)
 
 compiledb:
 	@[[ -f compile_commands.json ]] && mv -f compile_commands.json /tmp || true
-	bear make -C .
+	bear -- make -C .
 
 -include build/*.d
 -include build/*/*.d

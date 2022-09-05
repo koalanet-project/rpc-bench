@@ -28,7 +28,7 @@ void ShowUsage(const char* app) {
   fprintf(stdout, "  %s <host>    connect to server at <host>\n", app);
   fprintf(stdout, "\nOptions:\n");
   fprintf(stdout, "  -p, --port=<int>    the port to listen on or connect to, (default %d)\n", kDefaultPort);
-  fprintf(stdout, "  -a, --app=<str>     benchmark app, a string in ['bandwidth', 'latency', 'throughput']\n");
+  fprintf(stdout, "  -a, --app=<str>     benchmark app, a string in ['bandwidth', 'latency', 'throughput', 'hotel_reservation']\n");
   fprintf(stdout, "  -r, --rpc=<str>     rpc library, a string in ['grpc', 'socket', 'thrift', 'brpc']\n");
   fprintf(stdout, "  -d, --data=<size>   additional data size per request, (default %ld)\n", kDefaultDataSize);
   fprintf(stdout, "  -C, --concurrency=<int>   number of concurrent RPCs, (default %d)\n", kDefaultConcurrency);
