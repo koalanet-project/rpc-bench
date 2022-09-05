@@ -1,17 +1,18 @@
 import os
 import sys
 import copy
-import subprocess
-import argparse
 import re
+import csv
 
 sys.path.append("..")
 import bench_util as util
 
 util.args_parser.add_argument(
-    '--range', type=str, nargs='?', default='11,23', help="l,r means [1<<l, 1<<r] KByte")
+    '--range', type=str, nargs='?', default='1,12', help="l,r means [1<<l, 1<<r] KByte")
+util.args_parser.add_argument(
+    '--step', type=int, nargs='?', default=2, help="Range step")
 args = util.args_parser.parse_args()
-args.range = range(*map(int, args.range.split(',')))
+args.range = range(*map(int, args.range.split(',')), args.step)
 
 opt = util.opt_parser.parse_args(("%s -a bandwidth" % args.opt).split())
 os.chdir("../../")
@@ -45,5 +46,9 @@ for k in args.range:
 
 util.killall(args)
 
-for k, y1, y2 in zip(args.range, res, res_envoy):
-    print(1 << k, y1, y2)
+writer = csv.writer(sys.stdout, lineterminator='\n')
+writer.writerow(['Message Size (KB)', 'Bandwidth (Gb/s)', 'Solution'])
+for k, y in zip(args.range, res):
+    writer.writerow([1 << k, y, "gRPC"])
+for k, y in zip(args.range, res_envoy):
+    writer.writerow([1 << k, y, "gRPC (envoy)"])

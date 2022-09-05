@@ -9,6 +9,8 @@ Session.vim
 *.pb.cc
 *.svg
 *.log
+*.pdf
+*.csv
 
 __pycache__/
 

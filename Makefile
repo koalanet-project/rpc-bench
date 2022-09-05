@@ -27,7 +27,7 @@ LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
 		-Wl,--as-needed \
 		-ldl
 
-DEBUG := 1
+DEBUG := 0
 ifeq ($(DEBUG), 1)
 CFLAGS += -ftrapv -fstack-protector-strong -DPRISM_LOG_STACK_TRACE -DPRISM_LOG_STACK_TRACE_SIZE=128
 else
