@@ -1,5 +1,12 @@
 #include "grpc/grpc_lat_app.h"
 
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
+#include <grpcpp/health_check_service_interface.h>
+
+#include <thread>
+#include <limits>
+
+#include "prism/utils.h"
 #include "logging.h"
 
 namespace rpc_bench {
@@ -78,10 +85,20 @@ void GrpcLatServerApp::Init() {}
 
 int GrpcLatServerApp::Run() {
   std::string bind_address = "0.0.0.0:" + std::to_string(opts_.port);
-  ServerBuilder builder;
-  builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
 
+  int hardware_concurreny = std::thread::hardware_concurrency();
+  int new_max_threads = prism::GetEnvOrDefault<int>("RPC_BENCH_GRPC_MAX_THREAD", hardware_concurreny);
+  RPC_LOG(DEBUG) << "gRPC thread pool is set to use " << new_max_threads << " threads";
+
+  ServerBuilder builder;
+
+  ::grpc::ResourceQuota quota;
+  quota.SetMaxThreads(new_max_threads);
+  builder.SetResourceQuota(quota);
+  builder.SetMaxMessageSize(std::numeric_limits<int>::max());
+  builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
+
   cq_ = builder.AddCompletionQueue();
   server_ = builder.BuildAndStart();
   printf("Async server listening on %s\n", bind_address.c_str());

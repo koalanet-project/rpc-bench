@@ -26,6 +26,7 @@ for k in args.range:
     out = util.run_client(args, opt)
 
     items = out[-1].split()
+    print(out)
     res.append(float(items[1]))
 
 res_envoy = []
@@ -40,6 +41,7 @@ for k in args.range:
     out = util.run_client(args, opt_client)
 
     items = out[-1].split()
+    print(out)
     res_envoy.append(float(items[1]))
 
 util.killall(args)
