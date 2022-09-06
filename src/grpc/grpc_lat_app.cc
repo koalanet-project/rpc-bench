@@ -3,11 +3,11 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/health_check_service_interface.h>
 
-#include <thread>
 #include <limits>
+#include <thread>
 
-#include "prism/utils.h"
 #include "logging.h"
+#include "prism/utils.h"
 
 namespace rpc_bench {
 namespace grpc {
@@ -81,35 +81,52 @@ void GrpcLatServerApp::AsyncServerCall::Proceed() {
   }
 }
 
+void GrpcLatServerApp::Job(int thread_id) {
+  new AsyncServerCall(&service_, cq_[thread_id].get(), opts_.data_size);
+  void* tag;
+  bool ok;
+  while (true) {
+    GPR_ASSERT(cq_[thread_id]->Next(&tag, &ok));
+    static_cast<AsyncServerCall*>(tag)->Proceed();
+  }
+}
+
 void GrpcLatServerApp::Init() {}
 
 int GrpcLatServerApp::Run() {
   std::string bind_address = "0.0.0.0:" + std::to_string(opts_.port);
 
   int hardware_concurreny = std::thread::hardware_concurrency();
-  int new_max_threads = prism::GetEnvOrDefault<int>("RPC_BENCH_GRPC_MAX_THREAD", hardware_concurreny);
+  int new_max_threads =
+      prism::GetEnvOrDefault<int>("RPC_BENCH_GRPC_MAX_THREAD", hardware_concurreny);
   RPC_LOG(DEBUG) << "gRPC thread pool is set to use " << new_max_threads << " threads";
 
   ServerBuilder builder;
 
-  ::grpc::ResourceQuota quota;
-  quota.SetMaxThreads(new_max_threads);
-  builder.SetResourceQuota(quota);
+//   ::grpc::ResourceQuota quota;
+//   quota.SetMaxThreads(new_max_threads);
+//   builder.SetResourceQuota(quota);
   builder.SetMaxMessageSize(std::numeric_limits<int>::max());
   builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
 
-  cq_ = builder.AddCompletionQueue();
+  cq_.reserve(opts_.thread);
+  for (int i = 0; i < opts_.thread; i++) {
+    cq_.emplace_back(builder.AddCompletionQueue());
+  }
   server_ = builder.BuildAndStart();
   printf("Async server listening on %s\n", bind_address.c_str());
 
-  new AsyncServerCall(&service_, cq_.get(), opts_.data_size);
-  void* tag;
-  bool ok;
-  while (true) {
-    GPR_ASSERT(cq_->Next(&tag, &ok));
-    static_cast<AsyncServerCall*>(tag)->Proceed();
+  std::vector<std::thread> threads;
+  for (int i = 0; i < opts_.thread; i++) {
+    threads.emplace_back(&GrpcLatServerApp::Job, this, i);
   }
+
+  for (int i = 0; i < opts_.thread; i++) {
+    threads[i].join();
+  }
+
+  return 0;
 }
 
 }  // namespace grpc

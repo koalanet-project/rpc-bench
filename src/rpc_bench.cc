@@ -20,6 +20,7 @@ void ShowUsage(const char* app) {
   using rpc_bench::kDefaultPort;
   using rpc_bench::kDefaultDataSize;
   using rpc_bench::kDefaultConcurrency;
+  using rpc_bench::kDefaultThread;
   using rpc_bench::kDefaultPersistent;
   using rpc_bench::kDefaultTimeSec;
   using rpc_bench::kDefaultWarmupTimeSec;
@@ -32,6 +33,7 @@ void ShowUsage(const char* app) {
   fprintf(stdout, "  -r, --rpc=<str>     rpc library, a string in ['grpc', 'socket', 'thrift', 'brpc']\n");
   fprintf(stdout, "  -d, --data=<size>   additional data size per request, (default %ld)\n", kDefaultDataSize);
   fprintf(stdout, "  -C, --concurrency=<int>   number of concurrent RPCs, (default %d)\n", kDefaultConcurrency);
+  fprintf(stdout, "  -T, --thread=<int>   number of threads, (default %d)\n", kDefaultThread);
   fprintf(stdout, "  --monitor-time=<int>  # time in seconds to monitor cpu utilization\n");
   fprintf(stdout, "  --warmup=<int>      # time in seconds to wait before start monitoring cpu, (default %d secs if monitor-time is set)\n", kDefaultWarmupTimeSec);
   fprintf(stdout, "\nServer specific:\n");
@@ -57,6 +59,7 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
       {"proto", required_argument, 0, 'P'},
       {"data", required_argument, 0, 'd'},
       {"concurrency", required_argument, 0, 'C'},
+      {"thread", required_argument, 0, 'T'},
       {"persistent", no_argument, 0, kPersistentTag},
       {"time", required_argument, 0, 't'},
       {"monitor-time", required_argument, 0, kMonitorTimeTag},
@@ -65,7 +68,7 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
   };  // clang-format on
   while (1) {
     int option_index = 0, c;
-    c = getopt_long(argc, argv, "hp:a:r:P:d:t:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hp:a:r:P:d:C:T:t:", long_options, &option_index);
     if (c == -1) break;
     switch (c) {
       case 'h': {
@@ -89,6 +92,9 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
       } break;
       case 'C': {
         opts->concurrency = std::stoi(optarg);
+      } break;
+      case 'T': {
+        opts->thread = std::stoi(optarg);
       } break;
       case kPersistentTag: {
         opts->persistent = true;

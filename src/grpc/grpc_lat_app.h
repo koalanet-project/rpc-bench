@@ -58,15 +58,17 @@ class GrpcLatServerApp final : public LatServerApp {
 
   ~GrpcLatServerApp() {
     server_->Shutdown();
-    cq_->Shutdown();
+    for (auto& cq : cq_) cq->Shutdown();
   }
 
   virtual void Init() override;
 
   virtual int Run() override;
 
+  void Job(int thread_id);
+
  private:
-  std::unique_ptr<ServerCompletionQueue> cq_;
+  std::vector<std::unique_ptr<ServerCompletionQueue>> cq_;
   LatTputService::AsyncService service_;
   std::unique_ptr<Server> server_;
 

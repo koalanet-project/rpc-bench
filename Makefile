@@ -5,8 +5,8 @@ CC ?= gcc
 
 DEPS_PATH ?= $(shell pwd)/deps
 
-PROTOC ?= ${DEPS_PATH}/bin/protoc
-GRPC_CPP_PLUGIN ?= ${DEPS_PATH}/bin/grpc_cpp_plugin
+PROTOC = $(DEPS_PATH)/bin/protoc
+GRPC_CPP_PLUGIN := $(DEPS_PATH)/bin/grpc_cpp_plugin
 GRPC_CPP_PLUGIN_PATH := `which $(GRPC_CPP_PLUGIN)`
 
 INCPATH += -I./src -I$(DEPS_PATH)/include
@@ -27,7 +27,7 @@ LIBS += -L$(DEPS_PATH)/lib -Wl,-rpath=$(DEPS_PATH)/lib -Wl,--enable-new-dtags \
 		-Wl,--as-needed \
 		-ldl
 
-DEBUG := 0
+DEBUG ?= 0
 ifeq ($(DEBUG), 1)
 CFLAGS += -ftrapv -fstack-protector-strong -DPRISM_LOG_STACK_TRACE -DPRISM_LOG_STACK_TRACE_SIZE=128
 else
@@ -53,6 +53,8 @@ include make/deps.mk
 clean:
 	rm -rfv $(OBJS)
 	rm -rfv $(OBJS:.o=.d)
+	rm -rfv $(PROTO_PATH)/*.pb.*cc
+	rm -rfv $(PROTO_PATH)/*.pb.*h
 
 lint:
 	@echo 'todo lint'

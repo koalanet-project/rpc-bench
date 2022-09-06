@@ -34,6 +34,8 @@ class GrpcTputClientApp final : public TputClientApp {
 
   virtual int Run() override;
 
+  void Job(int thread_id);
+
  private:
   struct AsyncClientCall {
     Ack ack;
@@ -41,16 +43,15 @@ class GrpcTputClientApp final : public TputClientApp {
     Status status;
     std::unique_ptr<ClientAsyncResponseReader<Ack>> resp_reader;
 
-    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq_,
+    AsyncClientCall(const std::unique_ptr<LatTputService::Stub>& stub_, CompletionQueue* cq,
                     Data& data) {
-      this->resp_reader = stub_->PrepareAsyncSendData(&this->context, data, cq_);
+      this->resp_reader = stub_->PrepareAsyncSendData(&this->context, data, cq);
       this->resp_reader->StartCall();
       this->resp_reader->Finish(&this->ack, &this->status, this);
     }
   };
 
-  std::unique_ptr<LatTputService::Stub> stub_;
-  CompletionQueue cq_;
+  std::vector<std::unique_ptr<CompletionQueue>> cq_;
 };
 
 typedef GrpcLatServerApp GrpcTputServerApp;
