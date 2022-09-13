@@ -65,9 +65,13 @@ for k in args.range:
     print("Running %d threads" % opt.T, file=sys.stderr)
     util.killall(args)
     util.run_server(args, opt)
+    util.run_cpu_monitor()
     out = util.run_client(args, opt)
+    mpstats = util.stop_cpu_monitor()
 
     rate, cpus = parse_result(out)
+    cpus = mpstats[-1 - len(rate):-1]  # use mpstat instead
+    print("mpstats", cpus)
     for x1, x2 in zip(rate, cpus):
         res.append((opt.T, x1, x2))
 
@@ -80,9 +84,13 @@ for k in args.range:
     util.run_server(args, opt)
     opt_client = copy.deepcopy(opt)
     opt_client.p = 10001  # envoy port
+    util.run_cpu_monitor()
     out = util.run_client(args, opt_client)
+    mpstats = util.stop_cpu_monitor()
 
     rate, cpus = parse_result(out)
+    cpus = mpstats[-1 - len(rate):-1]  # use mpstat instead
+    print("mpstats", cpus)
     for x1, x2 in zip(rate, cpus):
         res_envoy.append((opt.T, x1, x2))
 

@@ -1,5 +1,6 @@
 import os
 import sys
+import signal
 import subprocess
 import argparse
 import time
@@ -32,6 +33,8 @@ def killall(args):
     os.system(cmd)
     ssh_cmd(args.server, cmd)
 
+    os.system("pkill -9 mpstat")  # only client will run mpstat
+
     time.sleep(1)
 
 
@@ -40,9 +43,9 @@ def run_server(args, opt):
     print(f'enable Envoy: {args.envoy}')
     if args.envoy:
         envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_server.log 2>&1 &" % opt.a
-    server_script = ''' 
+    server_script = '''
     cd ~/nfs/Developing/rpc-bench; %s;
-    GLOG_minloglevel=2 nohup ./build/rpc-bench -a %s -r grpc -d %d -T %d >/dev/null 2>&1 & 
+    GLOG_minloglevel=2 nohup ./build/rpc-bench -a %s -r grpc -d %d -T %d >/dev/null 2>&1 &
     ''' % (envoy_cmd, opt.a, opt.d, opt.T)
     print('server envoy:', envoy_cmd)
     print('server:', server_script)
@@ -70,3 +73,28 @@ def run_client(args, opt):
     err = err.decode().strip()
     out = out.decode().strip()
     return err + out
+
+
+proc_cpu = None
+
+
+def run_cpu_monitor():
+    global proc_cpu
+    proc_cpu = subprocess.Popen("mpstat -P ALL -u 1 | grep --line-buffered 'all'",
+                                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                preexec_fn=os.setsid)
+
+
+def stop_cpu_monitor():
+    os.killpg(os.getpgid(proc_cpu.pid), signal.SIGKILL)
+    # proc_cpu.kill()
+    out, err = proc_cpu.communicate()
+    out = out.decode().strip()
+    err = err.decode().strip()
+    cpus = []
+    for row in out.split('\n'):
+        line = row.split()
+        utime = float(line[3]) * 40.0
+        systime = float(line[5]) * 40.0
+        cpus.append(utime)
+    return cpus
