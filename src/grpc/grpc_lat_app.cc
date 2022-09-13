@@ -25,7 +25,6 @@ int GrpcLatClientApp::Run() {
   data.set_data(std::string(opts_.data_size, 'a'));
 
   long overlimit = 0;
-  std::vector<double> latencies;
   bool timeout = false;
   auto time_dura = std::chrono::microseconds(static_cast<long>(opts_.time_duration_sec * 1e6));
   auto start = std::chrono::high_resolution_clock::now(), last = start;
@@ -47,18 +46,8 @@ int GrpcLatClientApp::Run() {
       overlimit++;
   }
 
-  std::sort(latencies.begin(), latencies.end());
-  double sum = 0;
-  for (double latency : latencies) sum += latency;
-  size_t len = latencies.size();
   printf("Overlimit: %ld\n", overlimit);
-  printf(
-      "%zu\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t %.2f\t "
-      "[%zu samples]\n",
-      opts_.data_size, sum / len, latencies[(int)(0.5 * len)], latencies[(int)(0.05 * len)],
-      latencies[(int)(0.99 * len)], latencies[(int)(0.999 * len)], latencies[(int)(0.9999 * len)],
-      latencies[(int)(0.99999 * len)], latencies[(int)(0.999999 * len)], latencies[len - 1], len);
-
+  print();
   return 0;
 }
 
@@ -103,9 +92,9 @@ int GrpcLatServerApp::Run() {
 
   ServerBuilder builder;
 
-//   ::grpc::ResourceQuota quota;
-//   quota.SetMaxThreads(new_max_threads);
-//   builder.SetResourceQuota(quota);
+  //   ::grpc::ResourceQuota quota;
+  //   quota.SetMaxThreads(new_max_threads);
+  //   builder.SetResourceQuota(quota);
   builder.SetMaxMessageSize(std::numeric_limits<int>::max());
   builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);

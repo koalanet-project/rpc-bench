@@ -7,8 +7,10 @@
 #include "grpc/grpc_lat_app.h"
 #include "grpc/grpc_tput_app.h"
 #include "grpc/hotel_reservation_app.h"
+#include "lat_app.h"
 #include "logging.h"
 #include "socket/socket_bw_app.h"
+#include "socket/socket_lat_app.h"
 #include "zeromq/zeromq_bw_app.h"
 
 namespace rpc_bench {
@@ -34,6 +36,10 @@ App* App::Create(CommandOpts opts) {
     if (opts.rpc.value() == "grpc") {
       return opts.is_server.value() ? static_cast<App*>(new grpc::GrpcLatServerApp(opts))
                                     : static_cast<App*>(new grpc::GrpcLatClientApp(opts));
+    } else if (opts.rpc.value() == "socket") {
+      RPC_UNIMPLEMENTED
+      //   return opts.is_server.value() ? static_cast<App*>(new socket::SocketLatServerApp(opts))
+      //                                 : static_cast<App*>(new socket::SocketLatClientApp(opts));
     } else {
       RPC_UNIMPLEMENTED
     }
