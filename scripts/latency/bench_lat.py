@@ -25,8 +25,8 @@ for k in args.range:
     util.run_server(args, opt)
     out = util.run_client(args, opt)
 
-    items = out[-1].split()
     print(out)
+    items = out.split('\n')[-1].split()
     res.append(float(items[1]))
 
 res_envoy = []
@@ -40,8 +40,8 @@ for k in args.range:
     opt_client.p = 10001  # envoy port
     out = util.run_client(args, opt_client)
 
-    items = out[-1].split()
     print(out)
+    items = out.split('\n')[-1].split()
     res_envoy.append(float(items[1]))
 
 util.killall(args)

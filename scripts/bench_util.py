@@ -51,18 +51,22 @@ def run_server(args, opt):
 
 
 def run_client(args, opt):
+    envoy_cmd = ""
     env = dict(os.environ, GLOG_minloglevel="2", GLOG_logtostderr="1")
     print(f'enable Envoy: {args.envoy}')
     if args.envoy:
-        os.system(
-            "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_client.log 2>&1 &" % opt.a)
-        env = dict(env, http_proxy="http://127.0.0.1:10000/")
+        envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_client.log 2>&1 &" % opt.a
+        env = dict(env, http_proxy="http://127.0.0.1:10000/",
+                   grpc_proxy="http://127.0.0.1:10000/")
+    print('client envoy:', envoy_cmd)
+    os.system(envoy_cmd)
+    time.sleep(1)
     client_script = '''
-    ./build/rpc-bench -a %s -r grpc -d %d -C %d -T %d -p %d -t %d %s
-    ''' % (opt.a, opt.d, opt.c, opt.T, opt.p, opt.t, args.server)
+    ./build/rpc-bench -a %s -r grpc -d %d -C %d -T %d -p %d -t %d --monitor-time=%d %s
+    ''' % (opt.a, opt.d, opt.c, opt.T, opt.p, opt.t, opt.t, args.server)
     print('client:', client_script)
     with subprocess.Popen(client_script.split(), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
         out, err = proc.communicate()
-    err = err.decode().strip().split('\n')
-    out = out.decode().strip().split('\n')
+    err = err.decode().strip()
+    out = out.decode().strip()
     return err + out

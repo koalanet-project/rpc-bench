@@ -23,17 +23,15 @@ pattern_rps = re.compile(r"([0-9]*?\.?[0-9]*?)\sops/s")
 
 def parse_result(out, goodputs, rates):
     print(out)
-
-    bw = re.findall(pattern_mbps, '\n'.join(out))
+    bw = re.findall(pattern_mbps, out)
     print('bw', bw)
-    ops = re.findall(pattern_rps, '\n'.join(out))
+    ops = re.findall(pattern_rps, out)
     print('rate', ops)
     goodputs.append([float(i) for i in bw[1:]])
     rates.append([float(i) for i in ops[1:]])
 
 goodputs = []
 rates = []
-
 for k in args.range:
     args.envoy = False
     opt.d = (1 << k) * 1024
@@ -63,7 +61,7 @@ for k in args.range:
 util.killall(args)
 
 writer = csv.writer(sys.stdout, lineterminator='\n')
-writer.writerow(['RPC Size (KB)', 'Goodput (Gb/s)', 'Solution'])
+writer.writerow(['RPC Size (KB)', 'Goodput (Mb/s)', 'Solution'])
 for k, ys in zip(args.range, goodputs):
     for y in ys:
         writer.writerow([1 << k, y * 1e-3, f"gRPC ({opt.c})"])
