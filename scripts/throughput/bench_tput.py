@@ -12,10 +12,11 @@ util.args_parser.add_argument(
     '--range', type=str, nargs='?', default='0,4', help="l,r means [1<<l, 1<<r] threads")
 util.args_parser.add_argument(
     '--step', type=int, nargs='?', default=1, help="Range step")
+
 args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
 
-opt = util.opt_parser.parse_args(("%s -a throughput -t 12" % args.opt).split())
+opt = util.opt_parser.parse_args(("%s -a throughput -t 10" % args.opt).split())
 os.chdir("../../")
 
 pattern_tid = re.compile(r"\[meter\s*?([0-9]*?)\]")
@@ -65,9 +66,9 @@ for k in args.range:
     print("Running %d threads" % opt.T, file=sys.stderr)
     util.killall(args)
     util.run_server(args, opt)
-    util.run_cpu_monitor()
+    fname = util.run_cpu_monitor(args)
     out = util.run_client(args, opt)
-    mpstats = util.stop_cpu_monitor()
+    mpstats = util.stop_cpu_monitor(args, fname)
 
     rate, cpus = parse_result(out)
     cpus = mpstats[-1 - len(rate):-1]  # use mpstat instead
@@ -84,9 +85,9 @@ for k in args.range:
     util.run_server(args, opt)
     opt_client = copy.deepcopy(opt)
     opt_client.p = 10001  # envoy port
-    util.run_cpu_monitor()
+    fname = util.run_cpu_monitor(args)
     out = util.run_client(args, opt_client)
-    mpstats = util.stop_cpu_monitor()
+    mpstats = util.stop_cpu_monitor(args, fname)
 
     rate, cpus = parse_result(out)
     cpus = mpstats[-1 - len(rate):-1]  # use mpstat instead

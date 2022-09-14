@@ -10,6 +10,8 @@ args_parser.add_argument('server', metavar='server',
                          type=str, nargs='?', default='rdma0.danyang-06')
 args_parser.add_argument(
     '--opt', type=str, nargs='?', default='', help="Options of rpc-bench")
+args_parser.add_argument(
+    '-u', action='store_true', help="Monitor CPU utilization at the client (default at the server)")
 
 opt_parser = argparse.ArgumentParser()
 opt_parser.add_argument('-a', type=str, nargs='?')
@@ -33,7 +35,9 @@ def killall(args):
     os.system(cmd)
     ssh_cmd(args.server, cmd)
 
-    os.system("pkill -9 mpstat")  # only client will run mpstat
+    cmd = "pkill -9 mpstat"
+    os.system(cmd)
+    ssh_cmd(args.server, cmd)
 
     time.sleep(1)
 
@@ -70,31 +74,43 @@ def run_client(args, opt):
     print('client:', client_script)
     with subprocess.Popen(client_script.split(), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
         out, err = proc.communicate()
-    err = err.decode().strip()
     out = out.decode().strip()
+    err = err.decode().strip()
     return err + out
 
 
-proc_cpu = None
+def run_cpu_monitor(args):
+    fout = "/tmp/rpc_bench_cpu_monitor_%d" % time.time_ns()
+    # global proc_cpu
+    # proc_cpu = subprocess.Popen("mpstat -P ALL -u 1 | grep --line-buffered 'all'",
+    #                             shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    #                             preexec_fn=os.setsid)
+    cmd = f"nohup sh -c 'mpstat -P ALL -u 1 | grep --line-buffered all' >{fout} 2>/dev/null &"
+    print("CPU monitor:", cmd)
+    if args.u:
+        os.system(cmd)
+    else:
+        ssh_cmd(args.server, cmd)
+    return fout
 
 
-def run_cpu_monitor():
-    global proc_cpu
-    proc_cpu = subprocess.Popen("mpstat -P ALL -u 1 | grep --line-buffered 'all'",
-                                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                preexec_fn=os.setsid)
-
-
-def stop_cpu_monitor():
-    os.killpg(os.getpgid(proc_cpu.pid), signal.SIGKILL)
-    # proc_cpu.kill()
-    out, err = proc_cpu.communicate()
-    out = out.decode().strip()
-    err = err.decode().strip()
+def stop_cpu_monitor(args, fname):
+    raw_output = ""
+    killcmd = "pkill -9 mpstat"
+    if args.u:
+        os.system(killcmd)
+        with open(fname, "r") as fout:
+            raw_output = fout.read().strip()
+    else:
+        ssh_cmd(args.server, killcmd)
+        with subprocess.Popen(f'ssh -o "StrictHostKeyChecking no" {args.server} "cat {fname}"', shell=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+            out, err = proc.communicate()
+            raw_output = out.decode().strip()
     cpus = []
-    for row in out.split('\n'):
+    for row in raw_output.split('\n'):
         line = row.split()
         utime = float(line[3]) * 40.0
-        systime = float(line[5]) * 40.0
-        cpus.append(utime)
+        stime = float(line[5]) * 40.0
+        cpus.append(utime + stime)
     return cpus
