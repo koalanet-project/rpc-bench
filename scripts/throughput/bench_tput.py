@@ -16,7 +16,7 @@ util.args_parser.add_argument(
 args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
 
-opt = util.opt_parser.parse_args(("%s -a throughput -t 10 -c 64" % args.opt).split())
+opt = util.opt_parser.parse_args(("%s -a throughput -t 10" % args.opt).split())
 os.chdir("../../")
 
 pattern_tid = re.compile(r"\[meter\s*?([0-9]*?)\]")
@@ -66,7 +66,7 @@ for k in args.range:
     print("Running %d threads" % opt.T, file=sys.stderr)
     util.killall(args)
     util.run_server(args, opt)
-    fname = util.run_cpu_monitor(args)
+    fname = util.run_cpu_monitor(args, f"{opt.T}t_{opt.C}c")
     out = util.run_client(args, opt)
     mpstats = util.stop_cpu_monitor(args, fname)
 
@@ -86,7 +86,7 @@ for k in args.range:
     util.run_server(args, opt)
     opt_client = copy.deepcopy(opt)
     opt_client.p = 10001  # envoy port
-    fname = util.run_cpu_monitor(args)
+    fname = util.run_cpu_monitor(args, f"{opt.T}t_{opt.C}c")
     out = util.run_client(args, opt_client)
     mpstats = util.stop_cpu_monitor(args, fname)
 

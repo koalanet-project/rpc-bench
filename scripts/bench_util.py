@@ -18,7 +18,7 @@ opt_parser = argparse.ArgumentParser()
 opt_parser.add_argument('-a', type=str, nargs='?')
 opt_parser.add_argument('-p', type=int, nargs='?', default=18000)
 opt_parser.add_argument('-t', type=int, nargs='?', default=10)
-opt_parser.add_argument('-c', type=int, nargs='?', default=32)
+opt_parser.add_argument('-C', type=int, nargs='?', default=32)
 opt_parser.add_argument('-T', type=int, nargs='?', default=1)
 opt_parser.add_argument('-d', type=int, nargs='?', default=32)
 
@@ -76,7 +76,7 @@ def run_client(args, opt):
     time.sleep(1)
     client_script = '''
     ./build/rpc-bench -a %s -r grpc -d %d -C %d -T %d -p %d -t %d --monitor-time=%d %s
-    ''' % (opt.a, opt.d, opt.c, opt.T, opt.p, opt.t, opt.t, args.server)
+    ''' % (opt.a, opt.d, opt.C, opt.T, opt.p, opt.t, opt.t, args.server)
     print('client:', client_script)
     with subprocess.Popen(client_script.split(), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
         out, err = proc.communicate()
@@ -85,8 +85,12 @@ def run_client(args, opt):
     return err + out
 
 
-def run_cpu_monitor(args):
-    fout = "/tmp/rpc_bench_cpu_monitor_grpc_%d" % time.time_ns()
+def run_cpu_monitor(args, tag):
+    if args.u:
+        tag = "client_" + tag
+    else:
+        tag = "server_" + tag
+    fout = f"/tmp/rpc_bench_cpu_monitor_grpc_{tag}_{time.time_ns()}"
     cmd = f"nohup sh -c 'mpstat -P ALL -u 1 | grep --line-buffered all' >{fout} 2>/dev/null &"
     print("CPU monitor:", cmd)
     if args.u:
