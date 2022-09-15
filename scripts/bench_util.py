@@ -86,33 +86,23 @@ def run_client(args, opt):
 
 
 def run_cpu_monitor(args, tag):
-    if args.u:
-        tag = "client_" + tag
-    else:
-        tag = "server_" + tag
-    fout = f"/tmp/rpc_bench_cpu_monitor_grpc_{tag}_{time.time_ns()}"
-    cmd = f"nohup sh -c 'mpstat -P ALL -u 1 | grep --line-buffered all' >{fout} 2>/dev/null &"
-    print("CPU monitor:", cmd)
-    if args.u:
-        os.system(cmd)
-    else:
-        ssh_cmd(args.server, cmd)
-    return fout
+    if args.envoy:
+        tag = 'envoy_' + tag
+    timestamp = time.time_ns()
+    mpstat = "mpstat -P ALL -u 1  | grep --line-buffered all"
+
+    fsrv = f"/tmp/rpc_bench_cpu_monitor_grpc_server_{tag}_{timestamp}"
+    cmd = f"nohup sh -c '{mpstat}' >{fsrv} 2>/dev/null &"
+    ssh_cmd(args.server, cmd)
+
+    fcli = f"/tmp/rpc_bench_cpu_monitor_grpc_client_{tag}_{timestamp}"
+    cmd = f"nohup sh -c '{mpstat}' >{fcli} 2>/dev/null &"
+    os.system(cmd)
+
+    return (fsrv, fcli)
 
 
-def stop_cpu_monitor(args, fname):
-    raw_output = ""
-    killcmd = "pkill -9 mpstat"
-    if args.u:
-        os.system(killcmd)
-        with open(fname, "r") as fout:
-            raw_output = fout.read().strip()
-        cpu_count = multiprocessing.cpu_count()
-    else:
-        ssh_cmd(args.server, killcmd)
-        raw_output = ssh_cmd(args.server, f"cat {fname}")
-        cpucmd = "python3 -c 'from multiprocessing import cpu_count; print(cpu_count())'"
-        cpu_count = int(ssh_cmd(args.server, cpucmd))
+def parse_cpus(raw_output, cpu_count):
     cpus = []
     for row in raw_output.split('\n'):
         line = row.split()
@@ -121,3 +111,22 @@ def stop_cpu_monitor(args, fname):
         soft = float(line[8]) * cpu_count
         cpus.append([utime, stime, soft])
     return cpus
+
+
+def stop_cpu_monitor(args, fname: tuple):
+    killcmd = "pkill -9 mpstat"
+    os.system(killcmd)
+    ssh_cmd(args.server, killcmd)
+    fsrv, fcli = fname
+
+    with open(fcli, "r") as fout:
+        raw_output = fout.read().strip()
+    cpu_count = multiprocessing.cpu_count()
+    cpus_cli = parse_cpus(raw_output, cpu_count)
+
+    raw_output = ssh_cmd(args.server, f"cat {fsrv}")
+    cpucmd = "python3 -c 'from multiprocessing import cpu_count; print(cpu_count())'"
+    cpu_count = int(ssh_cmd(args.server, cpucmd))
+    cpus_srv = parse_cpus(raw_output, cpu_count)
+
+    return (cpus_srv, cpus_cli)

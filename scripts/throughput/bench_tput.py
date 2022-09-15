@@ -66,16 +66,20 @@ for k in args.range:
     print("Running %d threads" % opt.T, file=sys.stderr)
     util.killall(args)
     util.run_server(args, opt)
-    fname = util.run_cpu_monitor(args, f"{opt.T}t_{opt.C}c")
+    fname = util.run_cpu_monitor(args, f"tput_{opt.T}t_{opt.C}c")
     out = util.run_client(args, opt)
-    mpstats = util.stop_cpu_monitor(args, fname)
+    mpstat_srv, mpstat_cli = util.stop_cpu_monitor(args, fname)
 
     rates, cpus = parse_result(out)
-    cpus = mpstats[-1 - len(rates):-1]  # use mpstat instead
-    print("mpstats", cpus)
-    cpus = [sum(stat) for stat in cpus]
-    for x1, x2 in zip(rates, cpus):
-        res.append((opt.T, x1, x2))
+    cpus_srv = mpstat_srv[-1 - len(rates):-1]
+    cpus_cli = mpstat_cli[-1 - len(rates):-1]
+    print("mpstat server", cpus_srv)
+    print("mpstat client", cpus_cli)
+
+    cpus_srv = [sum(stat) for stat in cpus_srv]  # use mpstat instead
+    cpus_cli = [sum(stat) for stat in cpus_cli]  # use mpstat instead
+    for y1, y2, y3 in zip(rates, cpus_srv, cpus_cli):
+        res.append((opt.T, y1, y2, y3))
 
 res_envoy = []
 for k in args.range:
@@ -86,24 +90,29 @@ for k in args.range:
     util.run_server(args, opt)
     opt_client = copy.deepcopy(opt)
     opt_client.p = 10001  # envoy port
-    fname = util.run_cpu_monitor(args, f"{opt.T}t_{opt.C}c")
+    fname = util.run_cpu_monitor(args, f"tput_{opt.T}t_{opt.C}c")
     out = util.run_client(args, opt_client)
-    mpstats = util.stop_cpu_monitor(args, fname)
+    mpstat_srv, mpstat_cli = util.stop_cpu_monitor(args, fname)
 
     rates, cpus = parse_result(out)
-    cpus = mpstats[-1 - len(rates):-1]  # use mpstat instead
-    print("mpstats", cpus)
-    cpus = [sum(stat) for stat in cpus]
-    for x1, x2 in zip(rates, cpus):
-        res_envoy.append((opt.T, x1, x2))
+    cpus_srv = mpstat_srv[-1 - len(rates):-1]
+    cpus_cli = mpstat_cli[-1 - len(rates):-1]
+    print("mpstat server", cpus_srv)
+    print("mpstat client", cpus_cli)
+
+    cpus_srv = [sum(stat) for stat in cpus_srv]  # use mpstat instead
+    cpus_cli = [sum(stat) for stat in cpus_cli]  # use mpstat instead
+    for y1, y2, y3 in zip(rates, cpus_srv, cpus_cli):
+        res_envoy.append((opt.T, y1, y2, y3))
 
 util.killall(args)
 
 writer = csv.writer(sys.stdout, lineterminator='\n')
-writer.writerow(['# User Threads', 'RPC Rate (Mrps)', 'Solution', 'CPU'])
-for k, y1, y2 in res:
+writer.writerow(['# User Threads', 'RPC Rate (Mrps)',
+                'Solution', 'Server CPU', 'Client CPU'])
+for k, y1, y2, y3 in res:
     writer.writerow([k, float(format(y1 / 1e6, '.3g')),
-                    "gRPC", round(y2 / 1e2, 3)])
-for k, y1, y2 in res_envoy:
+                    "gRPC", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
+for k, y1, y2, y3 in res_envoy:
     writer.writerow([k, float(format(y1 / 1e6, '.3g')),
-                    "gRPC+Envoy", round(y2 / 1e2, 3)])
+                    "gRPC+Envoy", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
