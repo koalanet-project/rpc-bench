@@ -4,6 +4,7 @@ import signal
 import subprocess
 import argparse
 import time
+import multiprocessing
 
 args_parser = argparse.ArgumentParser()
 args_parser.add_argument('server', metavar='server',
@@ -23,7 +24,12 @@ opt_parser.add_argument('-d', type=int, nargs='?', default=32)
 
 
 def ssh_cmd(server, cmd):
-    os.system('ssh -o "StrictHostKeyChecking no" %s "%s"' % (server, cmd))
+    with subprocess.Popen(f'ssh -o "StrictHostKeyChecking no" {server} "{cmd}"', shell=True,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+        out, err = proc.communicate()
+        out = out.decode().strip()
+        err = err.decode().strip()
+    return err + out
 
 
 def killall(args):
@@ -80,11 +86,7 @@ def run_client(args, opt):
 
 
 def run_cpu_monitor(args):
-    fout = "/tmp/rpc_bench_cpu_monitor_%d" % time.time_ns()
-    # global proc_cpu
-    # proc_cpu = subprocess.Popen("mpstat -P ALL -u 1 | grep --line-buffered 'all'",
-    #                             shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    #                             preexec_fn=os.setsid)
+    fout = "/tmp/rpc_bench_cpu_monitor_grpc_%d" % time.time_ns()
     cmd = f"nohup sh -c 'mpstat -P ALL -u 1 | grep --line-buffered all' >{fout} 2>/dev/null &"
     print("CPU monitor:", cmd)
     if args.u:
@@ -101,16 +103,17 @@ def stop_cpu_monitor(args, fname):
         os.system(killcmd)
         with open(fname, "r") as fout:
             raw_output = fout.read().strip()
+        cpu_count = multiprocessing.cpu_count()
     else:
         ssh_cmd(args.server, killcmd)
-        with subprocess.Popen(f'ssh -o "StrictHostKeyChecking no" {args.server} "cat {fname}"', shell=True,
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
-            out, err = proc.communicate()
-            raw_output = out.decode().strip()
+        raw_output = ssh_cmd(args.server, f"cat {fname}")
+        cpucmd = "python3 -c 'from multiprocessing import cpu_count; print(cpu_count())'"
+        cpu_count = int(ssh_cmd(args.server, cpucmd))
     cpus = []
     for row in raw_output.split('\n'):
         line = row.split()
-        utime = float(line[3]) * 40.0
-        stime = float(line[5]) * 40.0
-        cpus.append(utime + stime)
+        utime = float(line[3]) * cpu_count
+        stime = float(line[5]) * cpu_count
+        soft = float(line[8]) * cpu_count
+        cpus.append([utime, stime, soft])
     return cpus

@@ -16,7 +16,7 @@ util.args_parser.add_argument(
 args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
 
-opt = util.opt_parser.parse_args(("%s -a throughput -t 10" % args.opt).split())
+opt = util.opt_parser.parse_args(("%s -a throughput -t 10 -c 64" % args.opt).split())
 os.chdir("../../")
 
 pattern_tid = re.compile(r"\[meter\s*?([0-9]*?)\]")
@@ -70,10 +70,11 @@ for k in args.range:
     out = util.run_client(args, opt)
     mpstats = util.stop_cpu_monitor(args, fname)
 
-    rate, cpus = parse_result(out)
-    cpus = mpstats[-1 - len(rate):-1]  # use mpstat instead
+    rates, cpus = parse_result(out)
+    cpus = mpstats[-1 - len(rates):-1]  # use mpstat instead
     print("mpstats", cpus)
-    for x1, x2 in zip(rate, cpus):
+    cpus = [sum(stat) for stat in cpus]
+    for x1, x2 in zip(rates, cpus):
         res.append((opt.T, x1, x2))
 
 res_envoy = []
@@ -89,10 +90,11 @@ for k in args.range:
     out = util.run_client(args, opt_client)
     mpstats = util.stop_cpu_monitor(args, fname)
 
-    rate, cpus = parse_result(out)
-    cpus = mpstats[-1 - len(rate):-1]  # use mpstat instead
+    rates, cpus = parse_result(out)
+    cpus = mpstats[-1 - len(rates):-1]  # use mpstat instead
     print("mpstats", cpus)
-    for x1, x2 in zip(rate, cpus):
+    cpus = [sum(stat) for stat in cpus]
+    for x1, x2 in zip(rates, cpus):
         res_envoy.append((opt.T, x1, x2))
 
 util.killall(args)
