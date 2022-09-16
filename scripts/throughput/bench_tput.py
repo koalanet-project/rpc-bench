@@ -3,6 +3,7 @@ import sys
 import copy
 import re
 import csv
+import time
 import numpy as np
 
 sys.path.append("..")
@@ -22,6 +23,8 @@ os.chdir("../../")
 pattern_tid = re.compile(r"\[meter\s*?([0-9]*?)\]")
 pattern_rps = re.compile(r"([0-9]*?\.?[0-9]*?)\sops/s")
 pattern_cpu = re.compile(r"CPU utilization:\s([0-9]*?\.?[0-9]*?)%")
+
+args.timestamp = time.time_ns()
 
 
 def parse_result(out):
@@ -71,13 +74,8 @@ for k in args.range:
     mpstat_srv, mpstat_cli = util.stop_cpu_monitor(args, fname)
 
     rates, cpus = parse_result(out)
-    cpus_srv = mpstat_srv[-1 - len(rates):-1]
-    cpus_cli = mpstat_cli[-1 - len(rates):-1]
-    print("mpstat server", cpus_srv)
-    print("mpstat client", cpus_cli)
 
-    cpus_srv = [sum(stat) for stat in cpus_srv]  # use mpstat instead
-    cpus_cli = [sum(stat) for stat in cpus_cli]  # use mpstat instead
+    cpus_srv, cpus_cli = util.merge_mpstat(mpstat_srv, mpstat_cli, len(rates))
     for y1, y2, y3 in zip(rates, cpus_srv, cpus_cli):
         res.append((opt.T, y1, y2, y3))
 
@@ -95,13 +93,8 @@ for k in args.range:
     mpstat_srv, mpstat_cli = util.stop_cpu_monitor(args, fname)
 
     rates, cpus = parse_result(out)
-    cpus_srv = mpstat_srv[-1 - len(rates):-1]
-    cpus_cli = mpstat_cli[-1 - len(rates):-1]
-    print("mpstat server", cpus_srv)
-    print("mpstat client", cpus_cli)
 
-    cpus_srv = [sum(stat) for stat in cpus_srv]  # use mpstat instead
-    cpus_cli = [sum(stat) for stat in cpus_cli]  # use mpstat instead
+    cpus_srv, cpus_cli = util.merge_mpstat(mpstat_srv, mpstat_cli, len(rates))
     for y1, y2, y3 in zip(rates, cpus_srv, cpus_cli):
         res_envoy.append((opt.T, y1, y2, y3))
 

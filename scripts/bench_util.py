@@ -4,6 +4,7 @@ import signal
 import subprocess
 import argparse
 import time
+from datetime import date
 import multiprocessing
 
 args_parser = argparse.ArgumentParser()
@@ -101,6 +102,50 @@ def run_cpu_monitor(args, tag):
     return (fsrv, fcli)
 
 
+timeformat = "%Y-%m-%dT%H:%M:%S"
+now_timestamp = time.time()
+localOffset = (datetime.datetime.fromtimestamp(
+    now_timestamp) - datetime.datetime.utcfromtimestamp(now_timestamp)).total_seconds()
+# Beijing: localOffset=28800
+
+
+def toTimestamp(strtime, offset=localOffset):
+    return int(time.mktime(time.strptime(strtime, timeformat))) + localOffset - offset
+# Beijing: offset=28800
+# toTimestamp(strtime): localtime->timestamp
+# toTimestamp(strtime, 0): utc time->timestamp
+
+
+def parse_timestamp(t1, t2):
+    today = str(date.today())
+    h, m, s = t1.split(':')
+    if t2 == 'PM':
+        h += 12
+    strtime = f"{today}T{h}:{m}:{s}"
+    return toTimestamp(strtime)
+
+
+def align_by_timestamp(base, seqs):  # seq must cover the base
+    if len(base) == 0:
+        return [], []
+    basev = [v for ts, v in base]
+    seqvs = []
+    for seq in seqs:
+        i = 0
+        while i < len(seq):
+            if seq[i][0] == base[0][0]:
+                break
+            i += 1
+        j = len(seq) - 1
+        while j > i:
+            if seq[j][0] == base[-1][0]:
+                break
+            j -= 1
+        seqv = [v for ts, v in seq[i:j + 1]]
+        seqvs.append(seqv)
+    return basev, seqvs
+
+
 def parse_cpus(raw_output, cpu_count):
     cpus = []
     for row in raw_output.split('\n'):
@@ -109,8 +154,9 @@ def parse_cpus(raw_output, cpu_count):
         stime = float(line[5]) * cpu_count
         soft = float(line[8]) * cpu_count
         non_idle = (100 - float(line[-1])) * cpu_count
-        # cpus.append([utime, stime, soft])
-        cpus.append([non_idle])
+        ts = parse_timestamp(line[0], line[1])
+        cpus.append((ts, [non_idle]))
+        # cpus.append((ts, [utime, stime, soft]))
     return cpus
 
 
@@ -139,6 +185,6 @@ def merge_mpstat(mpstat_srv, mpstat_cli, length):
     print("mpstat server", cpus_srv)
     print("mpstat client", cpus_cli)
 
-    cpus_srv = [sum(stat) for stat in cpus_srv]
-    cpus_cli = [sum(stat) for stat in cpus_cli]
+    cpus_srv = [sum(stat) for ts, stat in cpus_srv]
+    cpus_cli = [sum(stat) for ts, stat in cpus_cli]
     return cpus_srv, cpus_cli

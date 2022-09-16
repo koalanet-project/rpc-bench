@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <ctime>
 
 #include "logging.h"
 #include "prism/utils.h"
@@ -33,9 +34,9 @@ struct Meter {
       auto now = Clock::now();
       if ((now - tp) >= interval) {
         duration<double> dura = now - tp;
-        RPC_LOG(INFO) << prism::FormatString("[%s] Speed: %.6f Mb/s, dura = %.3f ms\n", name,
-                                             8.0 * bytes / dura.count() / 1000'000,
-                                             dura.count() * 1000);
+        RPC_LOG(INFO) << prism::FormatString(
+            "[%s] Timestamp: %ld, Speed: %.6f Mb/s, dura = %.3f ms\n", name, std::time(NULL),
+            8.0 * bytes / dura.count() / 1000'000, dura.count() * 1000);
         fflush(stdout);
         bytes = 0;
         tp = now;
@@ -51,8 +52,9 @@ struct Meter {
       auto now = Clock::now();
       if ((now - tp) >= interval) {
         duration<double> dura = now - tp;
-        printf("[%s] Speed: %.6f Mb/s %.0f ops/s, dura = %.3f ms\n", name,
-               8.0 * bytes / dura.count() / 1000'000, qps / dura.count(), dura.count() * 1000);
+        printf("[%s] Timestamp: %ld, Speed: %.6f Mb/s %.0f ops/s, dura = %.3f ms\n", name,
+               std::time(NULL), 8.0 * bytes / dura.count() / 1000'000, qps / dura.count(),
+               dura.count() * 1000);
         fflush(stdout);
         bytes = 0;
         qps = 0;
