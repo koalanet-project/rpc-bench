@@ -3,6 +3,7 @@ import sys
 import copy
 import re
 import csv
+import time
 
 sys.path.append("..")
 import bench_util as util
@@ -17,21 +18,23 @@ args.range = range(*map(int, args.range.split(',')), args.step)
 opt = util.opt_parser.parse_args(("%s -a throughput" % args.opt).split())
 os.chdir("../../")
 
-pattern = re.compile(r"([0-9]*?\.?[0-9]*?)\sGbps")
+# pattern = re.compile(r"([0-9]*?\.?[0-9]*?)\sGbps")
 pattern_mbps = re.compile(r"([0-9]*?\.?[0-9]*?)\sMb/s")
 pattern_rps = re.compile(r"([0-9]*?\.?[0-9]*?)\sops/s")
 
-def parse_result(out, goodputs, rates):
+args.timestamp = time.time_ns()
+
+
+def parse_result(out):
     print(out)
     bw = re.findall(pattern_mbps, out)
     print('bw', bw)
     ops = re.findall(pattern_rps, out)
     print('rate', ops)
-    goodputs.append([float(i) for i in bw[1:]])
-    rates.append([float(i) for i in ops[1:]])
+    return [float(i) for i in bw[1:-1]], [float(i) for i in ops[1:-1]]
 
-goodputs = []
-rates = []
+
+res = []
 for k in args.range:
     args.envoy = False
     opt.d = (1 << k) * 1024
@@ -40,11 +43,17 @@ for k in args.range:
     opt.d = 32
     util.run_server(args, opt)
     opt.d = (1 << k) * 1024
+    fname = util.run_cpu_monitor(args, f"bw_{opt.d}b_{opt.C}c")
     out = util.run_client(args, opt)
-    parse_result(out, goodputs, rates)
+    mpstat_srv, mpstat_cli = util.stop_cpu_monitor(args, fname)
 
-goodputs_envoy = []
-rates_envoy = []
+    goodputs, ops = parse_result(out)
+
+    cpus_srv, cpus_cli = util.merge_mpstat(mpstat_srv, mpstat_cli, len(ops))
+    for y1, y2, y3 in zip(goodputs, cpus_srv, cpus_cli):
+        res.append((round(opt.d / 1024), y1, y2, y3))
+
+res_envoy = []
 for k in args.range:
     args.envoy = True
     opt.d = (1 << k) * 1024
@@ -55,16 +64,30 @@ for k in args.range:
     opt.d = (1 << k) * 1024
     opt_client = copy.deepcopy(opt)
     opt_client.p = 10001  # envoy port
+    fname = util.run_cpu_monitor(args, f"bw_{opt.d}b_{opt.C}c")
     out = util.run_client(args, opt_client)
-    parse_result(out, goodputs_envoy, rates_envoy)
+    mpstat_srv, mpstat_cli = util.stop_cpu_monitor(args, fname)
+
+    goodputs, ops = parse_result(out)
+
+    cpus_srv, cpus_cli = util.merge_mpstat(mpstat_srv, mpstat_cli, len(ops))
+    for y1, y2, y3 in zip(goodputs, cpus_srv, cpus_cli):
+        res_envoy.append((round(opt.d / 1024), y1, y2, y3))
 
 util.killall(args)
 
-writer = csv.writer(sys.stdout, lineterminator='\n')
-writer.writerow(['RPC Size (KB)', 'Goodput (Mb/s)', 'Solution'])
-for k, ys in zip(args.range, goodputs):
-    for y in ys:
-        writer.writerow([1 << k, y * 1e-3, f"gRPC ({opt.c})"])
-for k, ys in zip(args.range, goodputs_envoy):
-    for y in ys:
-        writer.writerow([1 << k, y * 1e-3, f"gRPC+Envoy ({opt.c})"])
+
+fname = f"/tmp/rpc_bench_bw_{opt.C}c_{args.timestamp}.csv"
+with open(fname, "w") as fout:
+    writer = csv.writer(fout, lineterminator='\n')
+    writer.writerow(['RPC Size (KB)', 'Goodput (Gbps)',
+                    'Solution', 'Server CPU', 'Client CPU'])
+    for k, y1, y2, y3 in res:
+        writer.writerow([k, round(y1 / 1e3, 3),
+                        "gRPC", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
+    for k, y1, y2, y3 in res_envoy:
+        writer.writerow([k, round(y1 / 1e3, 3),
+                        "gRPC+Envoy", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
+print(fname)
+with open(fname, "r") as fin:
+    print(fin.read())

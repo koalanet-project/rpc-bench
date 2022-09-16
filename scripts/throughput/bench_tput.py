@@ -107,12 +107,17 @@ for k in args.range:
 
 util.killall(args)
 
-writer = csv.writer(sys.stdout, lineterminator='\n')
-writer.writerow(['# User Threads', 'RPC Rate (Mrps)',
-                'Solution', 'Server CPU', 'Client CPU'])
-for k, y1, y2, y3 in res:
-    writer.writerow([k, float(format(y1 / 1e6, '.3g')),
-                    "gRPC", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
-for k, y1, y2, y3 in res_envoy:
-    writer.writerow([k, float(format(y1 / 1e6, '.3g')),
-                    "gRPC+Envoy", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
+fname = f"/tmp/rpc_bench_tput_{opt.C}c"
+with open(fname, "w") as fout:
+    writer = csv.writer(fout, lineterminator='\n')
+    writer.writerow(['# User Threads', 'RPC Rate (Mrps)',
+                    'Solution', 'Server CPU', 'Client CPU'])
+    for k, y1, y2, y3 in res:
+        writer.writerow([k, float(format(y1 / 1e6, '.3g')),
+                        "gRPC", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
+    for k, y1, y2, y3 in res_envoy:
+        writer.writerow([k, float(format(y1 / 1e6, '.3g')),
+                        "gRPC+Envoy", round(y2 / 1e2, 3), round(y3 / 1e2, 3)])
+print(fname)
+with open(fname, "r") as fin:
+    print(fin.read())

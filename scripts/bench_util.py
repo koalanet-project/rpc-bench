@@ -88,14 +88,13 @@ def run_client(args, opt):
 def run_cpu_monitor(args, tag):
     if args.envoy:
         tag = 'envoy_' + tag
-    timestamp = time.time_ns()
     mpstat = "mpstat -P ALL -u 1  | grep --line-buffered all"
 
-    fsrv = f"/tmp/rpc_bench_cpu_monitor_grpc_server_{tag}_{timestamp}"
+    fsrv = f"/tmp/rpc_bench_cpu_monitor_grpc_server_{tag}_{args.timestamp}"
     cmd = f"nohup sh -c '{mpstat}' >{fsrv} 2>/dev/null &"
     ssh_cmd(args.server, cmd)
 
-    fcli = f"/tmp/rpc_bench_cpu_monitor_grpc_client_{tag}_{timestamp}"
+    fcli = f"/tmp/rpc_bench_cpu_monitor_grpc_client_{tag}_{args.timestamp}"
     cmd = f"nohup sh -c '{mpstat}' >{fcli} 2>/dev/null &"
     os.system(cmd)
 
@@ -109,7 +108,9 @@ def parse_cpus(raw_output, cpu_count):
         utime = float(line[3]) * cpu_count
         stime = float(line[5]) * cpu_count
         soft = float(line[8]) * cpu_count
-        cpus.append([utime, stime, soft])
+        non_idle = (100 - float(line[-1])) * cpu_count
+        # cpus.append([utime, stime, soft])
+        cpus.append([non_idle])
     return cpus
 
 
@@ -130,3 +131,14 @@ def stop_cpu_monitor(args, fname: tuple):
     cpus_srv = parse_cpus(raw_output, cpu_count)
 
     return (cpus_srv, cpus_cli)
+
+
+def merge_mpstat(mpstat_srv, mpstat_cli, length):
+    cpus_srv = mpstat_srv[-1 - length:-1]
+    cpus_cli = mpstat_cli[-1 - length:-1]
+    print("mpstat server", cpus_srv)
+    print("mpstat client", cpus_cli)
+
+    cpus_srv = [sum(stat) for stat in cpus_srv]
+    cpus_cli = [sum(stat) for stat in cpus_cli]
+    return cpus_srv, cpus_cli
