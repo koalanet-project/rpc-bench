@@ -4,16 +4,17 @@ import signal
 import subprocess
 import argparse
 import time
-from datetime import date
+import datetime
 import multiprocessing
 
 args_parser = argparse.ArgumentParser()
 args_parser.add_argument('server', metavar='server',
                          type=str, nargs='?', default='rdma0.danyang-06')
+args_parser.add_argument('-c', type=str, nargs='?',
+                         default='envoy/envoy.yaml', help='envoy config file')
 args_parser.add_argument(
     '--opt', type=str, nargs='?', default='', help="Options of rpc-bench")
-args_parser.add_argument(
-    '-u', action='store_true', help="Monitor CPU utilization at the client (default at the server)")
+
 
 opt_parser = argparse.ArgumentParser()
 opt_parser.add_argument('-a', type=str, nargs='?')
@@ -53,11 +54,11 @@ def run_server(args, opt):
     envoy_cmd = ""
     print(f'enable Envoy: {args.envoy}')
     if args.envoy:
-        envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_server.log 2>&1 &" % opt.a
-    server_script = '''
-    cd ~/nfs/Developing/rpc-bench; %s;
-    GLOG_minloglevel=2 nohup ./build/rpc-bench -a %s -r grpc -d %d -T %d >/dev/null 2>&1 &
-    ''' % (envoy_cmd, opt.a, opt.d, opt.T)
+        envoy_cmd = f"nohup envoy -c {args.c} >scripts/{opt.a}/envoy_server.log 2>&1 &"
+    server_script = f'''
+    cd ~/nfs/Developing/rpc-bench; {envoy_cmd};
+    GLOG_minloglevel=2 nohup ./build/rpc-bench -a {opt.a} -r grpc -d {opt.d} -T {opt.T} >/dev/null 2>&1 &
+    '''
     print('server envoy:', envoy_cmd)
     print('server:', server_script)
     ssh_cmd(args.server, server_script)
@@ -69,15 +70,15 @@ def run_client(args, opt):
     env = dict(os.environ, GLOG_minloglevel="2", GLOG_logtostderr="1")
     print(f'enable Envoy: {args.envoy}')
     if args.envoy:
-        envoy_cmd = "nohup envoy -c envoy/envoy.yaml >scripts/%s/envoy_client.log 2>&1 &" % opt.a
+        envoy_cmd = f"nohup envoy -c {args.c} >scripts/{opt.a}/envoy_client.log 2>&1 &"
         env = dict(env, http_proxy="http://127.0.0.1:10000/",
                    grpc_proxy="http://127.0.0.1:10000/")
     print('client envoy:', envoy_cmd)
     os.system(envoy_cmd)
     time.sleep(1)
-    client_script = '''
-    ./build/rpc-bench -a %s -r grpc -d %d -C %d -T %d -p %d -t %d --monitor-time=%d %s
-    ''' % (opt.a, opt.d, opt.C, opt.T, opt.p, opt.t, opt.t, args.server)
+    client_script = f'''
+    ./build/rpc-bench -a {opt.a} -r grpc -d {opt.d} -C {opt.C} -T {opt.T} -p {opt.p} -t {opt.t} --monitor-time={opt.t} {args.server}
+    '''
     print('client:', client_script)
     with subprocess.Popen(client_script.split(), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
         out, err = proc.communicate()
@@ -117,7 +118,7 @@ def toTimestamp(strtime, offset=localOffset):
 
 
 def parse_timestamp(t1, t2):
-    today = str(date.today())
+    today = str(datetime.date.today())
     h, m, s = t1.split(':')
     if t2 == 'PM':
         h += 12

@@ -14,6 +14,7 @@ util.args_parser.add_argument(
     '--step', type=int, nargs='?', default=2, help="Range step")
 args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
+args.timestamp = time.time_ns()
 
 opt = util.opt_parser.parse_args(("%s -a throughput" % args.opt).split())
 os.chdir("../../")
@@ -21,8 +22,6 @@ os.chdir("../../")
 # pattern = re.compile(r"([0-9]*?\.?[0-9]*?)\sGbps")
 pattern_mbps = re.compile(r"([0-9]*?\.?[0-9]*?)\sMb/s")
 pattern_rps = re.compile(r"([0-9]*?\.?[0-9]*?)\sops/s")
-
-args.timestamp = time.time_ns()
 
 
 def parse_result(out):

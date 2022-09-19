@@ -16,6 +16,7 @@ util.args_parser.add_argument(
 
 args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
+args.timestamp = time.time_ns()
 
 opt = util.opt_parser.parse_args(("%s -a throughput -t 10" % args.opt).split())
 os.chdir("../../")
@@ -23,8 +24,6 @@ os.chdir("../../")
 pattern_tid = re.compile(r"\[meter\s*?([0-9]*?)\]")
 pattern_rps = re.compile(r"([0-9]*?\.?[0-9]*?)\sops/s")
 pattern_cpu = re.compile(r"CPU utilization:\s([0-9]*?\.?[0-9]*?)%")
-
-args.timestamp = time.time_ns()
 
 
 def parse_result(out):
@@ -100,7 +99,7 @@ for k in args.range:
 
 util.killall(args)
 
-fname = f"/tmp/rpc_bench_tput_{opt.C}c"
+fname = f"/tmp/rpc_bench_tput_{opt.C}c_{args.timestamp}"
 with open(fname, "w") as fout:
     writer = csv.writer(fout, lineterminator='\n')
     writer.writerow(['# User Threads', 'RPC Rate (Mrps)',
