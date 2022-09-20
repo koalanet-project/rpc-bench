@@ -2,5 +2,5 @@
 
 for i in {0..10}; do
     echo "Run ${i}"
-    python3 bench_bw.py
+    python3 bench_tput.py
 done
