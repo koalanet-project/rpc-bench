@@ -16,7 +16,7 @@ args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
 args.timestamp = time.time_ns()
 
-opt = util.opt_parser.parse_args(("%s -a throughput" % args.opt).split())
+opt = util.opt_parser.parse_args(("%s -a throughput -C 128" % args.opt).split())
 os.chdir("../../")
 
 # pattern = re.compile(r"([0-9]*?\.?[0-9]*?)\sGbps")

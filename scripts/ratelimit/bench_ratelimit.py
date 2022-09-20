@@ -12,7 +12,7 @@ import bench_util as util
 args = util.args_parser.parse_args()
 args.timestamp = time.time_ns()
 
-opt = util.opt_parser.parse_args(("%s -a throughput -t 13" % args.opt).split())
+opt = util.opt_parser.parse_args(("%s -a throughput -t 13 -C 128" % args.opt).split())
 os.chdir("../../")
 
 pattern_mbps = re.compile(r"([0-9]*?\.?[0-9]*?)\sMb/s")

@@ -18,7 +18,7 @@ args = util.args_parser.parse_args()
 args.range = range(*map(int, args.range.split(',')), args.step)
 args.timestamp = time.time_ns()
 
-opt = util.opt_parser.parse_args(("%s -a throughput -t 10" % args.opt).split())
+opt = util.opt_parser.parse_args(("%s -a throughput -t 10 -C 128" % args.opt).split())
 os.chdir("../../")
 
 pattern_tid = re.compile(r"\[meter\s*?([0-9]*?)\]")
