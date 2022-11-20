@@ -1,8 +1,9 @@
+#![feature(type_alias_impl_trait)]
 use std::future::Future;
+use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use bytes::BytesMut;
 use futures::select;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -10,14 +11,13 @@ use hdrhistogram::Histogram;
 use minstant::Instant;
 use structopt::StructOpt;
 
-use tonic::transport::Channel;
-use tonic::Response;
+use volo_grpc::Response;
 
-pub mod rpc_hello {
-    tonic::include_proto!("rpc_hello");
+pub mod gen {
+    volo::include_service!("proto_gen.rs");
 }
-use rpc_hello::greeter_client::GreeterClient;
-use rpc_hello::{HelloReply, HelloRequest};
+use gen::proto_gen::rpc_hello::{GreeterClient, GreeterClientBuilder};
+use gen::proto_gen::rpc_hello::{HelloReply, HelloRequest};
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Koala RPC hello client")]
@@ -83,13 +83,13 @@ pub struct Args {
 struct RpcCall {
     start: Instant,
     req_size: usize,
-    res: Result<Response<HelloReply>, tonic::Status>,
+    res: Result<Response<HelloReply>, volo_grpc::Status>,
 }
 
 fn make_call<'a>(
     scnt: usize,
     reqs: &'a [HelloRequest],
-    client: &GreeterClient<Channel>,
+    client: &GreeterClient,
     args: &Args,
 ) -> impl Future<Output = RpcCall> + 'a {
     let start = Instant::now();
@@ -101,7 +101,7 @@ fn make_call<'a>(
         let fut = client.say_hello(req);
         RpcCall {
             start,
-            req_size: req_size,
+            req_size,
             res: fut.await,
         }
     }
@@ -110,20 +110,10 @@ fn make_call<'a>(
 #[allow(unused)]
 async fn run_bench(
     args: &Args,
-    client: GreeterClient<Channel>,
+    client: GreeterClient,
     mut reqs: Vec<HelloRequest>,
     tid: usize,
-) -> Result<(Duration, usize, usize, Histogram<u64>), tonic::Status> {
-    macro_rules! my_print {
-        ($($arg:tt)*) => {
-            if args.log_level == "info" {
-                tracing::info!($($arg)*);
-            } else {
-                println!($($arg)*);
-            }
-        }
-    }
-
+) -> Result<(Duration, usize, usize, Histogram<u64>), volo_grpc::Status> {
     let mut hist = hdrhistogram::Histogram::<u64>::new_with_max(60_000_000_000, 5).unwrap();
 
     let mut starts = Vec::with_capacity(args.concurrency);
@@ -193,7 +183,7 @@ async fn run_bench(
                     let bw = 8e-9 * (nbytes - last_nbytes) as f64 / last_dura.as_secs_f64();
                     if rcnt>args.warmup{
                         if args.log_latency {
-                            my_print!(
+                            println!(
                                     "Thread {}, {} rps, {} Gb/s, p95: {:?}, p99: {:?}",
                                     tid,
                                     rps,
@@ -203,7 +193,7 @@ async fn run_bench(
                                 );
                                 hist.clear();
                         } else {
-                            my_print!("Thread {}, {} rps, {} Gb/s", tid, rps, bw);
+                            println!("Thread {}, {} rps, {} Gb/s", tid, rps, bw);
                         }
                     }
                     last_ts = Instant::now();
@@ -224,48 +214,42 @@ async fn run_bench(
 }
 
 fn run_client_thread(tid: usize, args: &Args) -> Result<(), Box<dyn std::error::Error>> {
-    macro_rules! my_print {
-        ($($arg:tt)*) => {
-            if args.log_level == "info" {
-                tracing::info!($($arg)*);
-            } else {
-                println!($($arg)*);
-            }
-        }
-    }
+    let addr = (args.ip.as_str(), args.port + (tid % args.num_server_threads) as u16)
+        .to_socket_addrs()
+        .unwrap()
+        .next()
+        .unwrap();
 
     let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
+        .enable_io()
+        .enable_time()
         .build()?;
+
     rt.block_on(async {
-        let client = GreeterClient::connect(format!(
-            "http://{}:{}",
-            args.ip.as_str(),
-            args.port + (tid % args.num_server_threads) as u16,
-        ))
-        .await
-        .unwrap();
+        let client = GreeterClientBuilder::new("hello")
+            .address(addr)
+            .build();
         eprintln!("connection setup for thread {tid}");
 
         // provision
         let mut reqs = Vec::new();
         for _ in 0..args.provision_count {
-            let mut buf = BytesMut::with_capacity(args.req_size);
+            let mut buf = Vec::with_capacity(args.req_size);
             buf.resize(args.req_size, 42);
-            let req = HelloRequest { name: buf.freeze() };
+            let req = HelloRequest { name: buf };
             reqs.push(req);
         }
 
         let (dura, total_bytes, rcnt, hist) = run_bench(&args, client, reqs, tid).await?;
 
-        my_print!(
+        println!(
             "Thread {tid}, duration: {:?}, bandwidth: {:?} Gb/s, rate: {:.5} Mrps",
             dura,
             8e-9 * (total_bytes - args.warmup * args.req_size) as f64 / dura.as_secs_f64(),
             1e-6 * (rcnt - args.warmup) as f64 / dura.as_secs_f64(),
         );
         // print latencies
-        my_print!(
+        println!(
             "Thread {tid}, duration: {:?}, avg: {:?}, min: {:?}, median: {:?}, p95: {:?}, p99: {:?}, max: {:?}",
             dura,
             Duration::from_nanos(hist.mean() as u64),
@@ -276,7 +260,7 @@ fn run_client_thread(tid: usize, args: &Args) -> Result<(), Box<dyn std::error::
             Duration::from_nanos(hist.max()),
         );
 
-        Result::<(), tonic::Status>::Ok(())
+        Result::<(), volo_grpc::Status>::Ok(())
     })?;
 
     Ok(())
@@ -287,8 +271,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("args: {:?}", args);
 
     assert!(args.num_client_threads % args.num_server_threads == 0);
-
-    let _guard = init_tokio_tracing(&args.log_level, &args.log_dir);
 
     std::thread::scope(|s| {
         let mut handles = Vec::new();
@@ -302,38 +284,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     Ok(())
-}
-
-fn init_tokio_tracing(
-    level: &str,
-    log_directory: &Option<PathBuf>,
-) -> tracing_appender::non_blocking::WorkerGuard {
-    let format = tracing_subscriber::fmt::format()
-        .with_level(true)
-        .with_target(true)
-        .with_thread_ids(false)
-        .with_thread_names(false)
-        .with_ansi(false)
-        .compact();
-
-    let env_filter = tracing_subscriber::filter::EnvFilter::builder()
-        .parse(level)
-        .expect("invalid tracing level");
-
-    let (non_blocking, appender_guard) = if let Some(log_dir) = log_directory {
-        let file_appender = tracing_appender::rolling::minutely(log_dir, "rpc-client.log");
-        tracing_appender::non_blocking(file_appender)
-    } else {
-        tracing_appender::non_blocking(std::io::stdout())
-    };
-
-    tracing_subscriber::fmt::fmt()
-        .event_format(format)
-        .with_writer(non_blocking)
-        .with_env_filter(env_filter)
-        .init();
-
-    tracing::info!("tokio_tracing initialized");
-
-    appender_guard
 }

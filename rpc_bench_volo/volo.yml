@@ -1,0 +1,9 @@
+entries:
+  proto:
+    protocol: protobuf
+    filename: proto_gen.rs
+    idls:
+      - source: local
+        path: proto/rpc_hello/rpc_hello.proto
+        includes:
+        - proto
