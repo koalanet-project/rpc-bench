@@ -203,8 +203,8 @@ async fn run_bench(
             }
             complete => break,
             // default => {
-            // // Having a default branch when no futures is ready causes tonic not to make any
-            // // progress. This sounds like a bug of tonic.
+            //     // Having a default branch when no futures is ready causes tonic not to make any
+            //     // progress. This sounds like a bug.
             // }
         }
     }
