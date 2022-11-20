@@ -1,0 +1,32 @@
+[package]
+name = "rpc_bench"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tonic-build = "0.8.0"
+prost-build = "0.11.1"
+
+[dependencies]
+structopt = "0.3.23"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+futures = "0.3"
+tokio = "1.22.0"
+minstant = "0.1.1"
+hdrhistogram = "7.5.0"
+tonic = "0.8.1"
+prost = "0.11.0"
+bytes = "1.2.1"
+
+
+[[bin]]
+name = "rpc_bench_client"
+path = "src/client.rs"
+
+[[bin]]
+name = "rpc_bench_server"
+path = "src/server.rs"
