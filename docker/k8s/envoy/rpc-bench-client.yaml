@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rpc-bench-client
+spec:
+  containers:
+  - name: rpc-bench-box
+    image: rpc-bench-box
+    imagePullPolicy: Never
+    command: ["sleep"]
+    args: ["1h"]
+    volumeMounts:
+    - name: nfs
+      mountPath: /nfs
+    securityContext:
+      capabilities:
+        add: ["SYS_PTRACE", "SYS_NICE", "SYS_ADMIN"]
+  volumes:
+  - name: nfs
+    hostPath:
+      path: /nfs
+  nodeSelector:
+    kubernetes.io/hostname: danyang-05

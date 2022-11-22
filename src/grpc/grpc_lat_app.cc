@@ -3,6 +3,10 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/health_check_service_interface.h>
 
+// xDS
+#include <grpcpp/xds_server_builder.h>
+#include <grpcpp/ext/admin_services.h>
+
 #include <limits>
 #include <thread>
 
@@ -90,7 +94,8 @@ int GrpcLatServerApp::Run() {
       prism::GetEnvOrDefault<int>("RPC_BENCH_GRPC_MAX_THREAD", hardware_concurreny);
   RPC_LOG(DEBUG) << "gRPC thread pool is set to use " << new_max_threads << " threads";
 
-  ServerBuilder builder;
+  // ServerBuilder builder;
+  ::grpc::XdsServerBuilder builder;
 
   //   ::grpc::ResourceQuota quota;
   //   quota.SetMaxThreads(new_max_threads);
@@ -98,6 +103,8 @@ int GrpcLatServerApp::Run() {
   builder.SetMaxMessageSize(std::numeric_limits<int>::max());
   builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
+
+  // ::grpc::AddAdminServices(&builder);
 
   cq_.reserve(opts_.thread);
   for (int i = 0; i < opts_.thread; i++) {

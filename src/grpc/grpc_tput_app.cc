@@ -70,9 +70,9 @@ void GrpcTputClientApp::Job(int thread_id) {
   double rx_gbps = 8.0 * rx_size / duration / 1e9;
   double tx_rps = count / duration;
   double rx_rps = tx_rps;
-  RPC_LOG(INFO) << thread_id << " "
+  std::cout << thread_id << " "
                 << "Overlimit: " << overlimit;
-  RPC_LOG(INFO) << thread_id << " "
+  std::cout << thread_id << " "
                 << prism::FormatString(
                        "tx_gbps: %.3lf\t rx_gbps: %.3lf\t tx_rps: %.3lf\t rx_rps:%.3lf\n", tx_gbps,
                        rx_gbps, tx_rps, rx_rps);
