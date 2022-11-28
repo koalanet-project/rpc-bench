@@ -5,7 +5,6 @@
 
 // xDS
 #include <grpcpp/xds_server_builder.h>
-#include <grpcpp/ext/admin_services.h>
 
 #include <limits>
 #include <thread>
@@ -103,8 +102,6 @@ int GrpcLatServerApp::Run() {
   builder.SetMaxMessageSize(std::numeric_limits<int>::max());
   builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
-
-  // ::grpc::AddAdminServices(&builder);
 
   cq_.reserve(opts_.thread);
   for (int i = 0; i < opts_.thread; i++) {
