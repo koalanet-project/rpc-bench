@@ -3,8 +3,6 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/health_check_service_interface.h>
 
-#include <grpcpp/xds_server_builder.h>
-
 #include <limits>
 #include <thread>
 
@@ -157,13 +155,7 @@ void HotelReservationServerApp::Init() {
 
   ::grpc::EnableDefaultHealthCheckService(true);
   ::grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-  // ServerBuilder builder;
-  std::unique_ptr<ServerBuilder> builder;
-  if (opts_.xds) {
-    builder = std::unique_ptr<ServerBuilder>(new ::grpc::XdsServerBuilder());
-  } else {
-    builder = std::unique_ptr<ServerBuilder>(new ServerBuilder());
-  }
+  ServerBuilder builder;
 
   int hardware_concurreny = std::thread::hardware_concurrency();
   int new_max_threads = prism::GetEnvOrDefault<int>("RPC_BENCH_GRPC_MAX_THREAD", hardware_concurreny);
@@ -171,14 +163,14 @@ void HotelReservationServerApp::Init() {
 
   ResourceQuota quota;
   quota.SetMaxThreads(new_max_threads);
-  builder->SetResourceQuota(quota);
-  builder->SetMaxMessageSize(std::numeric_limits<int>::max());
-  builder->AddListeningPort(bind_uri, ::grpc::InsecureServerCredentials());
-  builder->RegisterService(&service_);
+  builder.SetResourceQuota(quota);
+  builder.SetMaxMessageSize(std::numeric_limits<int>::max());
+  builder.AddListeningPort(bind_uri, ::grpc::InsecureServerCredentials());
+  builder.RegisterService(&service_);
 
 
-  cq_ = builder->AddCompletionQueue();
-  server_ = std::unique_ptr<Server>(builder->BuildAndStart());
+  cq_ = builder.AddCompletionQueue();
+  server_ = std::unique_ptr<Server>(builder.BuildAndStart());
   RPC_LOG(DEBUG) << "Async gRPC server is listening on uri: " << bind_uri;
 }
 
