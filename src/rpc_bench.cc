@@ -24,6 +24,7 @@ void ShowUsage(const char* app) {
   using rpc_bench::kDefaultPersistent;
   using rpc_bench::kDefaultTimeSec;
   using rpc_bench::kDefaultWarmupTimeSec;
+  using rpc_bench::kDefaultXdsServer;
   fprintf(stdout, "Usage:\n");
   fprintf(stdout, "  %s           start an RPC benchmark server\n", app);
   fprintf(stdout, "  %s <host>    connect to server at <host>\n", app);
@@ -38,6 +39,7 @@ void ShowUsage(const char* app) {
   fprintf(stdout, "  --warmup=<int>      # time in seconds to wait before start monitoring cpu, (default %d secs if monitor-time is set)\n", kDefaultWarmupTimeSec);
   fprintf(stdout, "\nServer specific:\n");
   fprintf(stdout, "  --persistent        persistent server, (default %s)\n", kDefaultPersistent ? "true" : "false");
+  fprintf(stdout, "  --xds               gRPC xDS server, (default %s)\n", kDefaultXdsServer ? "true" : "false");
   fprintf(stdout, "\nClient specific:\n");
   fprintf(stdout, "  -P, --proto=<file>  protobuf format file\n");
   fprintf(stdout, "  -t, --time=<int>    # time in seconds to transmit for, (default %d secs)\n", kDefaultTimeSec);
@@ -49,6 +51,7 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
     kPersistentTag = 1000,
     kWarmupTag,
     kMonitorTimeTag,
+    kXdsServerTag,
   };
   int err = 0;
   static struct option long_options[] = {// clang-format off
@@ -64,6 +67,7 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
       {"time", required_argument, 0, 't'},
       {"monitor-time", required_argument, 0, kMonitorTimeTag},
       {"warmup", required_argument, 0, kWarmupTag},
+      {"xds", no_argument, 0, kXdsServerTag},
       {0, 0, 0, 0}
   };  // clang-format on
   while (1) {
@@ -108,6 +112,9 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
       case 't': {
         opts->time_duration_sec = std::stoi(optarg);
       } break;
+      case kXdsServerTag: {
+        opts->xds = true;
+      } break;
       case '?':
       default:
         err = 1;
@@ -123,6 +130,10 @@ int ParseArgument(int argc, char* argv[], CommandOpts* opts) {
     opts->host = argv[optind];
   } else {
     opts->is_server = true;
+  }
+
+  if (!opts->is_server && opts->xds) {
+    RPC_LOG(WARNING) << "--xds only works for server and will be ignored for the client";
   }
 out1:
   return err;

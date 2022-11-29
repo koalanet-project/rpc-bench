@@ -14,6 +14,7 @@ const int kDefaultThread = 1;
 const bool kDefaultPersistent = false;
 const int kDefaultTimeSec = 10;
 const int kDefaultWarmupTimeSec = 1;
+const bool kDefaultXdsServer = false;
 
 struct CommandOpts {
   std::optional<bool> is_server;
@@ -29,6 +30,7 @@ struct CommandOpts {
   double time_duration_sec;
   std::optional<double> monitor_time_sec;
   double monitor_warmup_sec;
+  bool xds;
 
   CommandOpts() {
     port = kDefaultPort;
@@ -38,6 +40,7 @@ struct CommandOpts {
     time_duration_sec = kDefaultTimeSec;
     monitor_warmup_sec = kDefaultWarmupTimeSec;
     thread = kDefaultThread;
+    xds = false;
   }
 
   // clang-format off
@@ -50,7 +53,8 @@ struct CommandOpts {
        << ", data_size: " << data_size << ", concurrency: " << concurrency << ", thread: " << thread
        << ", persistent: " << persistent << ", time: " << time_duration_sec << ", monitor-time: "
        << (monitor_time_sec.has_value() ? std::to_string(monitor_time_sec.value()) : NULLOPT)
-       << ", warmup: " << monitor_warmup_sec << " }";
+       << ", warmup: " << monitor_warmup_sec
+       << ", xds: " << xds << " }";
     return ss.str();
   }
   // clang-format on

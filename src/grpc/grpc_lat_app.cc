@@ -94,20 +94,25 @@ int GrpcLatServerApp::Run() {
   RPC_LOG(DEBUG) << "gRPC thread pool is set to use " << new_max_threads << " threads";
 
   // ServerBuilder builder;
-  ::grpc::XdsServerBuilder builder;
+  std::unique_ptr<ServerBuilder> builder;
+  if (opts_.xds) {
+    builder = std::unique_ptr<ServerBuilder>(new ::grpc::XdsServerBuilder());
+  } else {
+    builder = std::unique_ptr<ServerBuilder>(new ServerBuilder());
+  }
 
   //   ::grpc::ResourceQuota quota;
   //   quota.SetMaxThreads(new_max_threads);
   //   builder.SetResourceQuota(quota);
-  builder.SetMaxMessageSize(std::numeric_limits<int>::max());
-  builder.AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
-  builder.RegisterService(&service_);
+  builder->SetMaxMessageSize(std::numeric_limits<int>::max());
+  builder->AddListeningPort(bind_address, ::grpc::InsecureServerCredentials());
+  builder->RegisterService(&service_);
 
   cq_.reserve(opts_.thread);
   for (int i = 0; i < opts_.thread; i++) {
-    cq_.emplace_back(builder.AddCompletionQueue());
+    cq_.emplace_back(builder->AddCompletionQueue());
   }
-  server_ = builder.BuildAndStart();
+  server_ = builder->BuildAndStart();
   printf("Async server listening on %s\n", bind_address.c_str());
 
   std::vector<std::thread> threads;
