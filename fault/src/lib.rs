@@ -69,6 +69,11 @@ impl HttpContext for Fault {
         // if rand number > 0.2
         // if generate_random_number(0, 100).unwrap() < self.probility as i32 {
         if rand::random::<f32>() < self.probility {
+            self.send_http_response(
+                500,
+                vec![("grpc-status", "1"), ("grpc-message", "Access Dropped.\n")],
+                None,
+            );
             Action::Pause
         } else {
             Action::Continue
