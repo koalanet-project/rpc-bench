@@ -19,8 +19,8 @@ WORKDIR=`dirname $(realpath $0)`
 cd $WORKDIR
 
 pushd ../${PKG_NAME}
-cargo build --target=wasm32-unknown-unknown --release
-cp target/wasm32-unknown-unknown/release/${MOD_NAME}.wasm /tmp
+cargo build --target=wasm32-wasi --release
+cp target/wasm32-wasi/release/${MOD_NAME}.wasm /tmp
 popd
 
 cat envoy-wasm.yaml | sed "s/content_based_acl/${MOD_NAME}/g" > envoy-wasm-gen.yaml
