@@ -1,39 +1,33 @@
 use proxy_wasm::traits::{Context, HttpContext};
 use proxy_wasm::types::{Action, LogLevel};
 
-use getrandom::getrandom;
-use prost::Message;
-// pub mod lat_tput_app {
-//     include!(concat!(env!("OUT_DIR"), "/rpc_bench.lat_tput_app.rs"));
+// use getrandom::getrandom;
+
+// fn generate_random_number(min: i32, max: i32) -> Result<i32, getrandom::Error> {
+//     let range = max - min;
+//     let mut buffer = [0u8; 4]; // 4 bytes for a 32-bit integer
+//
+//     getrandom(&mut buffer)?;
+//
+//     let random_bytes = u32::from_ne_bytes(buffer) as i32;
+//     let random_number = min + (random_bytes % (range + 1));
+//
+//     Ok(random_number)
 // }
-
-fn generate_random_number(min: i32, max: i32) -> Result<i32, getrandom::Error> {
-    let range = max - min;
-    let mut buffer = [0u8; 4]; // 4 bytes for a 32-bit integer
-
-    getrandom(&mut buffer)?;
-
-    let random_bytes = u32::from_ne_bytes(buffer) as i32;
-    let random_number = min + (random_bytes % (range + 1));
-
-    Ok(random_number)
-}
-
-pub mod reservation {
-    include!(concat!(env!("OUT_DIR"), "/reservation.rs"));
-}
 
 #[no_mangle]
 pub fn _start() {
     proxy_wasm::set_log_level(LogLevel::Trace);
-    proxy_wasm::set_http_context(|_, _| -> Box<dyn HttpContext> {
-        Box::new(Fault { probility: 20 })
+    proxy_wasm::set_http_context(|probility, _| -> Box<dyn HttpContext> {
+        Box::new(Fault {
+            probility: (probility as f32) / 100.0,
+        })
     });
 }
 
 struct Fault {
     #[allow(unused)]
-    probility: u32,
+    probility: f32,
 }
 
 impl Context for Fault {}
@@ -58,7 +52,7 @@ impl HttpContext for Fault {
         Action::Continue
     }
 
-    fn on_http_request_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
+    fn on_http_request_body(&mut self, _body_size: usize, end_of_stream: bool) -> Action {
         // log::info!("on_http_request_body, body_size: {body_size}, end_of_stream: {end_of_stream}");
         if !end_of_stream {
             // Wait -- we'll be called again when the complete body is buffered
@@ -73,7 +67,8 @@ impl HttpContext for Fault {
         }
 
         // if rand number > 0.2
-        if generate_random_number(0, 100).unwrap() < self.probility as i32 {
+        // if generate_random_number(0, 100).unwrap() < self.probility as i32 {
+        if rand::random::<f32>() < self.probility {
             Action::Pause
         } else {
             Action::Continue
