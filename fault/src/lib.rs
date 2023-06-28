@@ -1,11 +1,23 @@
 use proxy_wasm::traits::{Context, HttpContext};
 use proxy_wasm::types::{Action, LogLevel};
 
+use getrandom::getrandom;
 use prost::Message;
-use rand::Rng;
 // pub mod lat_tput_app {
 //     include!(concat!(env!("OUT_DIR"), "/rpc_bench.lat_tput_app.rs"));
 // }
+
+fn generate_random_number(min: i32, max: i32) -> Result<i32, getrandom::Error> {
+    let range = max - min;
+    let mut buffer = [0u8; 4]; // 4 bytes for a 32-bit integer
+
+    getrandom(&mut buffer)?;
+
+    let random_bytes = u32::from_ne_bytes(buffer) as i32;
+    let random_number = min + (random_bytes % (range + 1));
+
+    Ok(random_number)
+}
 
 pub mod reservation {
     include!(concat!(env!("OUT_DIR"), "/reservation.rs"));
@@ -14,16 +26,14 @@ pub mod reservation {
 #[no_mangle]
 pub fn _start() {
     proxy_wasm::set_log_level(LogLevel::Trace);
-    proxy_wasm::set_http_context(|probility, _| -> Box<dyn HttpContext> {
-        Box::new(Fault {
-            probility: (probility as f32) / 100.0,
-        })
+    proxy_wasm::set_http_context(|_, _| -> Box<dyn HttpContext> {
+        Box::new(Fault { probility: 20 })
     });
 }
 
 struct Fault {
     #[allow(unused)]
-    probility: f32,
+    probility: u32,
 }
 
 impl Context for Fault {}
@@ -63,7 +73,7 @@ impl HttpContext for Fault {
         }
 
         // if rand number > 0.2
-        if rand::random::<f32>() < self.probility {
+        if generate_random_number(0, 100).unwrap() < self.probility as i32 {
             Action::Pause
         } else {
             Action::Continue
