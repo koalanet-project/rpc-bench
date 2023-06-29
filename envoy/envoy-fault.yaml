@@ -30,7 +30,7 @@ static_resources:
                abort:
                  http_status:  418
                  percentage:
-                   numerator: 20
+                   numerator: 1
                    denominator: HUNDRED
           - name: envoy.filters.http.router
             typed_config:

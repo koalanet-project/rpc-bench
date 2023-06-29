@@ -3,6 +3,7 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/health_check_service_interface.h>
 
+#include <chrono>
 #include <limits>
 #include <thread>
 
@@ -41,14 +42,14 @@ auto GenerateWorkload() -> std::tuple<Request&, size_t> {
   static Request request[2];
   static size_t req_size[2];
   if (!init) {
-    request[0].set_customername("danyang");
+    request[0].set_customername("Apple");
     request[0].add_hotelid();
     request[0].set_hotelid(0, kHotelId);
     request[0].set_indate("2022-09-01");
     request[0].set_outdate("2022-09-02");
     request[0].set_roomnumber(128);
 
-    request[1].set_customername("matt");
+    request[1].set_customername("Banana");
     request[1].add_hotelid();
     request[1].set_hotelid(0, kHotelId);
     request[1].set_indate("2022-09-02");
@@ -96,6 +97,10 @@ int HotelReservationClientApp::Run() {
       meter.AddQps(0, 0);
     }
 
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = now - call->start;
+    latencies.push_back(1e6 * diff.count());
+
     delete call;
     req_cnt--;
 
@@ -126,6 +131,7 @@ int HotelReservationClientApp::Run() {
   double rx_rps = tx_rps;
   printf("%.6lf\t %.6lf\t %.2lf\t %.2lf\n", tx_gbps, rx_gbps, tx_rps, rx_rps);
 
+  print();
   return 0;
 }
 

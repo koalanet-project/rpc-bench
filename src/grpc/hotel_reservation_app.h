@@ -3,10 +3,12 @@
 #include <grpc/grpc.h>
 #include <grpcpp/grpcpp.h>
 
+#include <chrono>
 #include <memory>
 
 #include "command_opts.h"
 #include "app.h"
+#include "lat_app.h"
 #include "grpcpp/health_check_service_interface.h"
 #include "grpcpp/security/server_credentials.h"
 #include "protos/reservation.grpc.pb.h"
@@ -24,16 +26,17 @@ using ::reservation::Reservation;
 using ::reservation::Request;
 using ::reservation::Result;
 
-class HotelReservationClientApp : public App {
+class HotelReservationClientApp : public LatClientApp {
  public:
-  HotelReservationClientApp(CommandOpts opts) : App(opts) {}
+  HotelReservationClientApp(CommandOpts opts) : LatClientApp(opts) {}
 
-  void Init();
+  void Init() override;
 
   virtual int Run() override;
 
  private:
   struct AsyncClientCall {
+    std::chrono::high_resolution_clock::time_point start;
     Result result;
     size_t size;
     ClientContext context;
@@ -46,6 +49,7 @@ class HotelReservationClientApp : public App {
       this->resp_reader->StartCall();
       this->resp_reader->Finish(&this->result, &this->status, this);
       this->size = size;
+      this->start = std::chrono::high_resolution_clock::now();
     }
   };
 
