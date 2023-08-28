@@ -61,8 +61,8 @@ $(LEVELDB):
 
 BRPC := $(DEPS_PATH)/include/brpc/channel.h
 $(BRPC): $(GFLAGS) $(LEVELDB) $(GRPC) #$(GLOG)
-	$(eval DIR=incubator-brpc-1.2.0)
-	wget https://github.com/apache/incubator-brpc/archive/refs/tags/1.2.0.tar.gz -O- | tar xzf -
+	$(eval DIR=brpc-1.2.0)
+	curl -L https://github.com/apache/incubator-brpc/archive/refs/tags/1.2.0.tar.gz -o- | tar xzf -
 	cd $(DIR) && sed -i "178s#\(.*\)-lssl -lcrypto\(.*\)#\1`pkg-config --variable=libdir libssl`/libssl.so `pkg-config --variable=libdir libcrypto`/libcrypto.so\2#g" config_brpc.sh && sed -i 's/-lglog"/-lglog -Wl,-Bdynamic -lunwind"/g' config_brpc.sh
 	cd $(DIR) && PATH=$(DEPS_PATH)/bin:$(PATH) sh config_brpc.sh --with-glog --headers="$(DEPS_PATH)/include /usr/include" --libs="$(DEPS_PATH)/lib /usr/lib64" --nodebugsymbols && $(MAKE) && cp -r output/* $(DEPS_PATH)
 	rm -rf $(DIR)
