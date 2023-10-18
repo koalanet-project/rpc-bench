@@ -45,22 +45,22 @@ $(LEVELDB):
 	cd $(DIR) && mkdir -p build-shared && cd build-shared && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF LEVELDB_BUILD_TESTS=OFF LEVELDB_BUILD_BENCHMARKS=OFF -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) .. && $(MAKE) && $(MAKE) install
 	rm -rf $(FILE) $(DIR)
 
-# UNWIND:= $(DEPS_PATH)/include/libunwind.h
-# $(UNWIND):
-# 	$(eval DIR=libunwind)
-# 	git clone -b v1.6.2 https://github.com/libunwind/libunwind.git
-# 	cd $(DIR) && autoreconf -i && ./configure && $(MAKE) && $(MAKE) install prefix=$(DEPS_PATH)
-# 	rm -rf $(DIR)
+UNWIND:= $(DEPS_PATH)/include/libunwind.h
+$(UNWIND):
+	$(eval DIR=libunwind)
+	git clone -b v1.6.2 https://github.com/libunwind/libunwind.git
+	cd $(DIR) && autoreconf -i && ./configure --prefix=$(DEPS_PATH) && $(MAKE) clean && $(MAKE) && $(MAKE) install prefix=$(DEPS_PATH)
+	rm -rf $(DIR)
 
-# GLOG := $(DEPS_PATH)/include/glog/logging.h
-# $(GLOG): $(UNWIND)
-# 	$(eval DIR=glog)
-# 	git clone -b v0.5.0 https://github.com/google/glog.git
-# 	cd $(DIR) && cmake -S . -B build -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) && cmake --build build --target install
-# 	rm -rf $(DIR)
+GLOG := $(DEPS_PATH)/include/glog/logging.h
+$(GLOG): $(UNWIND)
+	$(eval DIR=glog)
+	git clone -b v0.5.0 https://github.com/google/glog.git
+	cd $(DIR) && cmake -S . -B build -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=$(DEPS_PATH) && cmake --build build --target install
+	rm -rf $(DIR)
 
 BRPC := $(DEPS_PATH)/include/brpc/channel.h
-$(BRPC): $(GFLAGS) $(LEVELDB) $(GRPC) #$(GLOG)
+$(BRPC): $(GFLAGS) $(LEVELDB) $(GRPC) $(GLOG)
 	$(eval DIR=brpc-1.2.0)
 	curl -L https://github.com/apache/incubator-brpc/archive/refs/tags/1.2.0.tar.gz -o- | tar xzf -
 	cd $(DIR) && sed -i "178s#\(.*\)-lssl -lcrypto\(.*\)#\1`pkg-config --variable=libdir libssl`/libssl.so `pkg-config --variable=libdir libcrypto`/libcrypto.so\2#g" config_brpc.sh && sed -i 's/-lglog"/-lglog -Wl,-Bdynamic -lunwind"/g' config_brpc.sh
